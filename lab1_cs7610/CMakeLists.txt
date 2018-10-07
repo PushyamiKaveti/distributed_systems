@@ -18,4 +18,5 @@ add_executable(lab1_cs7610 prj1_tm.cpp )
 add_executable(talker talker.cpp)
 add_executable(listener listener.cpp)
 add_executable(timer1 asio_test.cpp)
+add_executable(mesg messages.cpp)
 
