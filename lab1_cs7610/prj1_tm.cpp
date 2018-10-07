@@ -60,7 +60,7 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 
 }
 
-void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , DataMessage m){
+void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m){
 
     //send messages in a loop to all the hosts
     for (int i=0 ; i <=fdmax ;i++)
@@ -69,7 +69,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , DataMessage m
         {
             //char mesg[MAXBUFLEN]="hellow";
             //send(i,mesg, strlen(mesg), 0)
-            if (send(i,&m, sizeof m, 0) == -1) {
+            if (send(i,&(*m), sizeof m, 0) == -1) {
                 perror("send");
             }
         }
