@@ -131,8 +131,7 @@ int main(int argc, char *argv[])
 
     // loop through all the results and bind to the first we can
     for(p = servinfo; p != NULL; p = p->ai_next) {
-        //getnameinfo(p->ai_addr, p->ai_addrlen, host, sizeof (host), NULL, 0, NI_NUMERICHOST);
-        //puts(host);
+
         if ((receive_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("listener: socket");
             continue;
@@ -160,6 +159,7 @@ int main(int argc, char *argv[])
     FD_SET(receive_fd , &original);
     fdmax = receive_fd;
     gethostname(host , sizeof (host));
+    puts(host);
 
     //loop through the hostnames
     int c=0;
@@ -204,8 +204,8 @@ int main(int argc, char *argv[])
                 fdmax = sock_fd;
             }
 
-            cout<<strcmp(host, remote_host);
-            if (string(host).compare(string(remote_host))){
+
+            if (strcmp(host, i.c_str()) == 0){
                 pid = c+1;
                 cout<<"process id :"<<pid<<"\n";
             }
