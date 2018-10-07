@@ -70,7 +70,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m_src){
             //char mesg[MAXBUFLEN]="hellow";
             //send(i,mesg, strlen(mesg), 0)
             //cout <<sizeof(*m)<<"\n";
-            if (send(i,&(*m), sizeof m, 0) == -1) {
+            if (send(i,m, sizeof m, 0) == -1) {
                 perror("send");
             }
         }
