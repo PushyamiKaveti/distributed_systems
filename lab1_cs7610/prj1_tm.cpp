@@ -201,6 +201,7 @@ int main(int argc, char *argv[])
             }
             if (strcmp(s, s_tmp) == 0){
                 pid = c+1;
+                cout<<"process id :"<<pid<<"\n";
             }
             c=c+1;
             break;
@@ -226,6 +227,7 @@ int main(int argc, char *argv[])
         if (send_m){
             if (c <= num_mesgs){
                 DataMessage m {1,pid,c,1};
+                c=c+1;
                 multicast_mesg(fdmax , writefds, receive_fd, m);
                 send_m = false;
             }
