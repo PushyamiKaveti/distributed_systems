@@ -60,7 +60,7 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 
 }
 
-void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , DataMessage m){
+void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m){
     //send messages in a loop to all the hosts
     for (int i=0 ; i <=fdmax ;i++)
     {
@@ -75,7 +75,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , DataMessage m
     }
 }
 
-
+//a timer
 void timer_thread(bool& s, int& interval)
 {
 
@@ -85,6 +85,36 @@ void timer_thread(bool& s, int& interval)
     }
 }
 
+// function to handle the received messages
+void handle_messages(uint32_t ty ,uint32_t pid, int seq , int fdmax, fd_set writefds, int receive_fd, char* buf){
+
+    printf("listener: packet contains \"%d  \"\n", ty);
+    switch(ty){
+        case 1:
+        {
+            //handle datamessages
+            DataMessage* b = (DataMessage *)buf;
+            AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
+
+            multicast_mesg(fdmax , writefds, receive_fd, &m);
+            break;
+        }
+        case 2:
+        {
+            //handle ack messages
+            AckMessage* b = (AckMessage *)buf;
+            break;
+        }
+
+        case 3:
+        {
+            //handle sequence messages
+            SeqMessage* b = (SeqMessage *)buf;
+            break;
+        }
+
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -234,7 +264,7 @@ int main(int argc, char *argv[])
             if (c <= num_mesgs){
                 DataMessage m {1,pid,c,1};
                 c=c+1;
-                multicast_mesg(fdmax , writefds, receive_fd, m);
+                multicast_mesg(fdmax , writefds, receive_fd, &m);
                 send_m = false;
             }
 
@@ -255,7 +285,7 @@ int main(int argc, char *argv[])
 
                 if (FD_ISSET(i, &readfds)) {
                     if(i == receive_fd){
-                        // handle the received message
+                        // received message
                         addr_len = sizeof their_addr;
                         if ((numbytes = recvfrom(i, buf, MAXBUFLEN-1 , 0,
                                                  (struct sockaddr *)&their_addr, &addr_len)) == -1) {
@@ -266,8 +296,12 @@ int main(int argc, char *argv[])
                         printf("listener: got packet from %s\n", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
                         printf("listener: packet is %d bytes long\n", numbytes);
                         buf[numbytes] = '\0';
-                        DataMessage* b = (DataMessage *)&buf;
-                        printf("listener: packet contains \"%d , %d \"\n", b->msg_id , b->sender);
+                        //check the first few bytes and check the type of the message
+                        uint32_t b1;
+                        memcpy(&b1 , &buf, sizeof(uint32_t));
+                        //handle the message
+                        handle_messages(b1 ,pid, 0 ,fdmax, writefds, receive_fd, buf);
+
 
                     }
 
