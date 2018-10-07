@@ -188,9 +188,9 @@ int main(int argc, char *argv[])
     FD_SET(receive_fd , &readfds);
     FD_SET(receive_fd , &original);
     fdmax = receive_fd;
-    gethostname(host , sizeof (host));
-    puts(host);
+    
 
+    gethostname(host , sizeof (host));
     //loop through the hostnames
     int c=0;
     for (auto &i : hostnames)
@@ -296,6 +296,7 @@ int main(int argc, char *argv[])
                         printf("listener: got packet from %s\n", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
                         printf("listener: packet is %d bytes long\n", numbytes);
                         buf[numbytes] = '\0';
+
                         //check the first few bytes and check the type of the message
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
