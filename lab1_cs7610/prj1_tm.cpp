@@ -82,7 +82,7 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 
 void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , char *m){
     //send messages in a loop to all the hosts
-    for (int i=0 ; i <fdmax ;i++)
+    for (int i=0 ; i <=fdmax ;i++)
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
         {
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
             perror("select"); // error occurred in select()
             exit(1);
         } else if (rv == 0) {
-            printf("Timeout occurred!  No data after 5 seconds.\n");
+           // printf("Timeout occurred!  No data after 5 seconds.\n");
         } else {
             // one of the descriptors have data
             for (int i =0; i<=fdmax ; i++){
