@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
     FD_SET(receive_fd , &original);
     fdmax = receive_fd;
     gethostname(host , sizeof (host));
-
+    puts(host);
     //loop through the hostnames
     int c=0;
     for (auto &i : hostnames)
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
                 fdmax = sock_fd;
             }
 
-            cout<<strcmp(host, remote_host);
+            cout<<strcmp(host, i.c_str());
             if (string(host).compare(string(remote_host))){
                 pid = c+1;
                 cout<<"process id :"<<pid<<"\n";
