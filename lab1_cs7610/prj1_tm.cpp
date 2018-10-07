@@ -186,6 +186,7 @@ int main(int argc, char *argv[])
             }
 
             printf("remote : %s\n",s_tmp);
+            printf("remote : %s\n",s);
 
             int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
             if (res <0)
