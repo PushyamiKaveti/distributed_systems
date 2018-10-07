@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
             if (c <= num_mesgs){
                 DataMessage m {1,pid,c,1};
                 c=c+1;
-                multicast_mesg(fdmax , writefds, receive_fd, &m);
+                multicast_mesg(fdmax , writefds, receive_fd, (void*)&m);
                 send_m = false;
             }
 
