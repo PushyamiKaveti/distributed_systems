@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     struct sockaddr_storage their_addr;
     socklen_t addr_len;
     int num_mesgs = 5;
-
+    char host[256];
 
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
         for(p = servinfo; p != NULL; p = p->ai_next) {
 
             inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s_tmp, INET6_ADDRSTRLEN);
+            getnameinfo(p->ai_addr, p->ai_addrlen, host, sizeof (host), NULL, 0, NI_NUMERICHOST);
+            //puts(host);
 
             if ((sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
                 perror("remote: socket");
@@ -187,6 +189,7 @@ int main(int argc, char *argv[])
 
             printf("remote : %s\n",s_tmp);
             printf("remote : %s\n",s);
+            puts(host);
 
             int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
             if (res <0)
