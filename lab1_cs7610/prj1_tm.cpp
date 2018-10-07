@@ -266,8 +266,12 @@ int main(int argc, char *argv[])
                         printf("listener: got packet from %s\n", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
                         printf("listener: packet is %d bytes long\n", numbytes);
                         buf[numbytes] = '\0';
+                        cout<<numbytes<<"\n";
                         DataMessage* b = (DataMessage *)&buf;
-                        printf("listener: packet contains \"%d , %d \"\n", b->msg_id , b->sender);
+                        uint32_t b1;
+                        memcpy(&b1 , &buf, sizeof(uint32_t));
+                        printf("listener: packet contains \"%d , %d \"\n", b->msg_id , b1);
+                        //printf("listener: packet contains \"%d , %d \"\n", b->msg_id ,  (uint32_t)buf[4]);
 
                     }
 
