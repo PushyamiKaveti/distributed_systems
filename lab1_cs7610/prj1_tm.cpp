@@ -60,7 +60,9 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 
 }
 
-void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m){
+void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m_src){
+    DataMessage* m = (DataMessage *)m_src;
+
     //send messages in a loop to all the hosts
     for (int i=0 ; i <=fdmax ;i++)
     {
@@ -96,7 +98,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , int fdmax, fd_set writ
             DataMessage* b = (DataMessage *)buf;
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
 
-            multicast_mesg(fdmax , writefds, receive_fd, &m);
+            //multicast_mesg(fdmax , writefds, receive_fd, &m);
             break;
         }
         case 2:
@@ -188,9 +190,9 @@ int main(int argc, char *argv[])
     FD_SET(receive_fd , &readfds);
     FD_SET(receive_fd , &original);
     fdmax = receive_fd;
-    
-
     gethostname(host , sizeof (host));
+    puts(host);
+
     //loop through the hostnames
     int c=0;
     for (auto &i : hostnames)
@@ -296,12 +298,11 @@ int main(int argc, char *argv[])
                         printf("listener: got packet from %s\n", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
                         printf("listener: packet is %d bytes long\n", numbytes);
                         buf[numbytes] = '\0';
-
                         //check the first few bytes and check the type of the message
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid, 0 ,fdmax, writefds, receive_fd, buf);
+                        handle_messages(b1 ,pid, 0,fdmax, writefds, receive_fd, buf);
 
 
                     }
