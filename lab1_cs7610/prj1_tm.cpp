@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
     socklen_t addr_len;
     int num_mesgs = 5;
     char host[256];
+    char remote_host[256];
 
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
@@ -130,12 +131,13 @@ int main(int argc, char *argv[])
 
     // loop through all the results and bind to the first we can
     for(p = servinfo; p != NULL; p = p->ai_next) {
-        //getnameinfo(p->ai_addr, p->ai_addrlen, host, sizeof (host), NULL, 0, NI_NUMERICHOST);
+        getnameinfo(p->ai_addr, p->ai_addrlen, host, sizeof (host), NULL, 0, NI_NUMERICHOST);
         //puts(host);
         if ((receive_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("listener: socket");
             continue;
         }
+
 
         printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
 
@@ -179,7 +181,7 @@ int main(int argc, char *argv[])
         for(p = servinfo; p != NULL; p = p->ai_next) {
 
             inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s_tmp, INET6_ADDRSTRLEN);
-            getnameinfo(p->ai_addr, p->ai_addrlen, host, sizeof (host), NULL, 0, NI_NUMERICHOST);
+            getnameinfo(p->ai_addr, p->ai_addrlen, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
             //puts(host);
 
             if ((sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
@@ -188,8 +190,6 @@ int main(int argc, char *argv[])
             }
 
             printf("remote : %s\n",s_tmp);
-            printf("remote : %s\n",s);
-            puts(host);
 
             int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
             if (res <0)
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
             if (fdmax < sock_fd){
                 fdmax = sock_fd;
             }
-            if (strcmp(s, s_tmp) == 0){
+            if (strcmp(host, remote_host) == 0){
                 pid = c+1;
                 cout<<"process id :"<<pid<<"\n";
             }
