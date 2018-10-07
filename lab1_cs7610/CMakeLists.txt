@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 2.8)
 project(lab1_cs7610)
 
 include(CheckCXXCompilerFlag)
@@ -13,14 +13,9 @@ else()
 endif()
 set(CMAKE_CXX_STANDARD 11)
 
-find_package(Boost 1.55.0 REQUIRED COMPONENTS system filesystem)
-include_directories(${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
-
 
 add_executable(lab1_cs7610 prj1_tm.cpp )
 add_executable(talker talker.cpp)
 add_executable(listener listener.cpp)
 add_executable(timer1 asio_test.cpp)
 
-target_link_libraries(timer1 ${Boost_LIBRARIES})
