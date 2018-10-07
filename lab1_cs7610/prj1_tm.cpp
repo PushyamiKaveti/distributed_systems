@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
             if (fdmax < sock_fd){
                 fdmax = sock_fd;
             }
-            if (strcmp(host, remote_host) == 0){
+            if (string(host)== string(remote_host)){
                 pid = c+1;
                 cout<<"process id :"<<pid<<"\n";
             }
