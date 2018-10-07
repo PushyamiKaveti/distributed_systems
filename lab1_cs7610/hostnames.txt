@@ -1,0 +1,3 @@
+login.ccs.neu.edu
+vdi-linux-030.ccs.neu.edu
+vdi-linux-031.ccs.neu.edu
