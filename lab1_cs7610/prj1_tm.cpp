@@ -126,12 +126,13 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> ma
     switch(ty){
         case 1:
         {
-            cout<<"handling datamessage"<<"\n";
+
             //handle datamessages
             DataMessage* b = (DataMessage *)buf;
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
             //send Ack message tpo the sender of the datamessage
             int sock_fd = map1.find(b->sender)->second;
+            cout<<"sending ack to sender :"<< map1.find(b->sender)->first<<"\n";
             send_mesg( sock_fd , &m , 2);
             break;
         }
