@@ -73,10 +73,11 @@ void send_mesg(int sock_fd , void* m , uint32_t ty){
         {
 
             s = sizeof (AckMessage);
+            cout<<"sending ack of size"<<s <<"\n";
             break;
         }
     }
-    cout<<"inside send"<<"\n";
+
     if (send(sock_fd, m, s, 0) == -1) {
         perror("send");
     }
@@ -124,7 +125,7 @@ void timer_thread(bool& s, int& interval)
 // function to handle the received messages
 void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> map1, char* buf){
 
-    printf("listener: packet contains \"%d  \"\n", ty);
+    printf("listener: packet contains type \"%d  \"\n", ty);
     switch(ty){
         case 1:
         {
