@@ -71,11 +71,12 @@ void send_mesg(int sock_fd , void* m , uint32_t ty){
         }
         case 2 :
         {
-            cout<<"inside send"<<"\n";
+
             s = sizeof (AckMessage);
             break;
         }
     }
+    cout<<"inside send"<<"\n";
     if (send(sock_fd, m, s, 0) == -1) {
         perror("send");
     }
@@ -320,6 +321,7 @@ int main(int argc, char *argv[])
         } else if (rv == 0) {
            // printf("Timeout occurred!  No data after 5 seconds.\n");
         } else {
+            cout<<"there is a message\n";
             // one of the descriptors have data
             for (int i =0; i<=fdmax ; i++){
 
