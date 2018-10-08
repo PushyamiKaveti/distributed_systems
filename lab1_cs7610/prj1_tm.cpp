@@ -23,6 +23,7 @@
 #include <ctime>
 #include <thread>
 #include "messages.h"
+#include <map>
 
 
 
@@ -58,6 +59,25 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
         f.close();
     }
 
+}
+
+void send_mesg(int sock_fd , void* m , uint32_t ty){
+    int s =0 ;
+    switch (ty){
+        case 1 :
+        {
+            s = sizeof (DataMessage);
+            break;
+        }
+        case 2 :
+        {
+            s = sizeof (AckMessage);
+            break;
+        }
+    }
+    if (send(sock_fd, m, s, 0) == -1) {
+        perror("send");
+    }
 }
 
 void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint32_t ty){
@@ -100,7 +120,7 @@ void timer_thread(bool& s, int& interval)
 }
 
 // function to handle the received messages
-void handle_messages(uint32_t ty ,uint32_t pid, int seq , int fdmax, fd_set writefds, int receive_fd, char* buf){
+void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> map1, char* buf){
 
     printf("listener: packet contains \"%d  \"\n", ty);
     switch(ty){
@@ -109,8 +129,9 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , int fdmax, fd_set writ
             //handle datamessages
             DataMessage* b = (DataMessage *)buf;
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
-
-            //multicast_mesg(fdmax , writefds, receive_fd, &m);
+            //send Ack message tpo the sender of the datamessage
+            int sock_fd = map1.find(b->sender)->second;
+            send_mesg( sock_fd , &m , 2);
             break;
         }
         case 2:
@@ -153,6 +174,7 @@ int main(int argc, char *argv[])
     int num_mesgs = 5;
     char host[256];
     char remote_host[256];
+    map <uint32_t , int> pid_sock_map;
 
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
@@ -247,7 +269,8 @@ int main(int argc, char *argv[])
             if (fdmax < sock_fd){
                 fdmax = sock_fd;
             }
-
+            // add the pid , socked fd pairs to the map
+            pid_sock_map.insert(pair <uint32_t , int> (pid , sock_fd));
 
             if (strcmp(host, i.c_str()) == 0){
                 pid = c+1;
@@ -314,7 +337,7 @@ int main(int argc, char *argv[])
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid, 0,fdmax, writefds, receive_fd, buf);
+                        handle_messages(b1 ,pid, 0, pid_sock_map, buf);
 
 
                     }
