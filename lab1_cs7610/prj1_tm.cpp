@@ -126,6 +126,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> ma
     switch(ty){
         case 1:
         {
+            cout<<"handling datamessage"<<"\n";
             //handle datamessages
             DataMessage* b = (DataMessage *)buf;
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
