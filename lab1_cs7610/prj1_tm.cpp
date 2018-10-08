@@ -34,6 +34,7 @@ using namespace std;
 map <uint32_t , DataMessage*> mid_message_map;
 map <uint32_t , bool > mid_delivery_status_map;
 multimap <uint32_t , AckMessage> ack_q;
+priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
 
 // preparing the sockets from host names file
 void *get_in_addr(struct sockaddr *sa)
@@ -134,8 +135,26 @@ bool check_acks(map<uint32_t, int> pid_sock_map, uint32_t msg_id){
     return false;
 
 }
+
+std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue(SeqMessage* b){
+    priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
+    while (!final_mesg_q.empty()) {
+        Mesg_pq p = final_mesg_q.top();
+        if (p.msg_id == b->msg_id ){
+            Mesg_pq m_pq {p.msg_id , b->final_seq, true};
+            tmp_q.push(m_pq);
+        }
+        else{
+            tmp_q.push(p);
+        }
+        final_mesg_q.pop();
+
+    }
+    final_mesg_q = tmp_q;
+    return tmp_q;
+}
 // function to handle the received messages
-void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, char* buf){
+void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, char* buf){
 
     printf("listener: packet contains type \"%d  \"\n", ty);
     switch(ty){
@@ -147,6 +166,10 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pi
             mid_q.push(b->msg_id);
             mid_message_map.insert(pair <uint32_t, DataMessage*> (b->msg_id , b));
             mid_delivery_status_map.insert(pair <uint32_t, bool>(b->msg_id, false));
+            //ideally we dont have to give a large sequence number. we can have the proposed sequence number
+            // the queue will be reordered when we change the sequnce number
+            Mesg_pq m_pq{b->msg_id, (uint32_t )(seq+1), false};
+            final_mesg_q.push(m_pq);
 
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
             //send Ack message tpo the sender of the datamessage
@@ -176,12 +199,13 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pi
                //     }
 
                 cout<<"received all ACKS\n";
-                }
-                //SeqMessage seq_m {3,b->sender,b->msg_id,max_seq,max_seq_proposer};
-                //multicast_mesg(fdmax , writefds, receive_fd, &mseq_m , 3);
+                SeqMessage seq_m {3,b->sender,b->msg_id,0,0};
+                multicast_mesg(fdmax , writefds, receive_fd, &seq_m , 3);
 
                 // and multicast the final  seq numbner
-            
+                }
+
+
             break;
         }
 
@@ -189,7 +213,31 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pi
         {
             //handle sequence messages
             SeqMessage* b = (SeqMessage *)buf;
-            break;
+            mid_delivery_status_map[b->msg_id] = true;
+            //reorder the queue
+            priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
+            while (!final_mesg_q.empty()) {
+                Mesg_pq p = final_mesg_q.top();
+                if (p.msg_id == b->msg_id ){
+                    Mesg_pq m_pq {p.msg_id , b->final_seq, true};
+                    tmp_q.push(m_pq);
+                }
+                else{
+                    tmp_q.push(p);
+                }
+                final_mesg_q.pop();
+
+            }
+            final_mesg_q = tmp_q;
+            //deliver the low sequence and deliverable messages
+            while (!final_mesg_q.empty()){
+                Mesg_pq p = final_mesg_q.top();
+                if(p.deliver ){
+                    final_mesg_q.pop();
+                    cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<"with seq :("<<p.final_seq<<")";
+                }
+            }
+                break;
         }
 
     }
@@ -385,7 +433,7 @@ int main(int argc, char *argv[])
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid, 0, pid_sock_map, mid_q, buf);
+                        handle_messages(b1 ,pid, 0, pid_sock_map, mid_q, fdmax, writefds, receive_fd ,buf);
 
 
                     }
