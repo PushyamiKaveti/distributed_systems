@@ -62,7 +62,7 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 }
 
 void send_mesg(int sock_fd , void* m , uint32_t ty){
-    int s =0 ;
+    int s = 0 ;
     switch (ty){
         case 1 :
         {
@@ -71,6 +71,7 @@ void send_mesg(int sock_fd , void* m , uint32_t ty){
         }
         case 2 :
         {
+            cout<<"inside send"<<"\n";
             s = sizeof (AckMessage);
             break;
         }
@@ -132,7 +133,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> ma
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
             //send Ack message tpo the sender of the datamessage
             int sock_fd = map1.find(b->sender)->second;
-            cout<<"sending ack to sender :"<< map1.find(b->sender)->first<<"\n";
+            cout<<"sending ack to sender :"<< map1.find(b->sender)->second<<"\n";
             send_mesg( sock_fd , &m , 2);
             break;
         }
