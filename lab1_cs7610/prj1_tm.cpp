@@ -274,14 +274,15 @@ int main(int argc, char *argv[])
             if (fdmax < sock_fd){
                 fdmax = sock_fd;
             }
+            c=c+1;
             // add the pid , socked fd pairs to the map
-            pid_sock_map.insert(pair <uint32_t , int> (pid , sock_fd));
+            pid_sock_map.insert(pair <uint32_t , int> (c , sock_fd));
 
             if (strcmp(host, i.c_str()) == 0){
-                pid = c+1;
+                pid = c;
                 cout<<"process id :"<<pid<<"\n";
             }
-            c=c+1;
+
             break;
         }
 
