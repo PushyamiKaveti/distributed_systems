@@ -24,13 +24,16 @@
 #include <thread>
 #include "messages.h"
 #include <map>
+#include <queue>
 
 
 
 #define MAXBUFLEN 100
 using namespace std;
 
-
+map <uint32_t , DataMessage*> mid_message_map;
+map <uint32_t , bool > mid_delivery_status_map;
+multimap <uint32_t , AckMessage> ack_q;
 
 // preparing the sockets from host names file
 void *get_in_addr(struct sockaddr *sa)
@@ -122,8 +125,17 @@ void timer_thread(bool& s, int& interval)
     }
 }
 
+bool check_acks(map<uint32_t, int> pid_sock_map, uint32_t msg_id){
+
+    int num_acks = ack_q.count(msg_id);
+    if (num_acks == pid_sock_map.size()){
+        return true;
+    }
+    return false;
+
+}
 // function to handle the received messages
-void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> map1, char* buf){
+void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, char* buf){
 
     printf("listener: packet contains type \"%d  \"\n", ty);
     switch(ty){
@@ -132,10 +144,14 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> ma
 
             //handle datamessages
             DataMessage* b = (DataMessage *)buf;
+            mid_q.push(b->msg_id);
+            mid_message_map.insert(pair <uint32_t, DataMessage*> (b->msg_id , b));
+            mid_delivery_status_map.insert(pair <uint32_t, bool>(b->msg_id, false));
+
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
             //send Ack message tpo the sender of the datamessage
-            int sock_fd = map1.find(b->sender)->second;
-            cout<<"sending ack to sender :"<< map1.find(b->sender)->second<<"\n";
+            int sock_fd = pid_sock_map.find(b->sender)->second;
+            cout<<"sending ack to sender :"<< pid_sock_map.find(b->sender)->second<<"\n";
             send_mesg( sock_fd , &m , 2);
             break;
         }
@@ -143,6 +159,29 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> ma
         {
             //handle ack messages
             AckMessage* b = (AckMessage *)buf;
+            cout<<"reaceived ACK for msg:"<<b->msg_id<<"\n";
+            ack_q.insert( pair <uint32_t , AckMessage> (b->msg_id , *b));
+            if (check_acks(pid_sock_map, b->msg_id)){
+                //find the maximum of the sequence numbers proposed
+               // pair <multimap<uint32_t ,AckMessage>::iterator, multimap<uint32_t ,AckMessage>::iterator> ret;
+               // ret = ack_q.equal_range(b->msg_id);
+               // uint32_t max_seq = 0;
+               // uint32_t max_seq_proposer = 0;
+               // for (std::multimap<uint32_t ,AckMessage>::iterator it=ret.first; it!=ret.second; ++it){
+               //     AckMessage am = it->second;
+                //    int a_seq = am.proposed_seq;
+                //    if (a_seq > max_seq){
+                //        max_seq = a_seq;
+               //         max_seq_proposer = am.proposer;
+               //     }
+
+                cout<<"received all ACKS\n";
+                }
+                //SeqMessage seq_m {3,b->sender,b->msg_id,max_seq,max_seq_proposer};
+                //multicast_mesg(fdmax , writefds, receive_fd, &mseq_m , 3);
+
+                // and multicast the final  seq numbner
+            
             break;
         }
 
@@ -180,6 +219,8 @@ int main(int argc, char *argv[])
     char host[256];
     char remote_host[256];
     map <uint32_t , int> pid_sock_map;
+    queue <uint32_t > mid_q;
+
 
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
@@ -323,7 +364,7 @@ int main(int argc, char *argv[])
         } else if (rv == 0) {
            // printf("Timeout occurred!  No data after 5 seconds.\n");
         } else {
-            cout<<"there is a message\n";
+
             // one of the descriptors have data
             for (int i =0; i<=fdmax ; i++){
 
@@ -344,7 +385,7 @@ int main(int argc, char *argv[])
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid, 0, pid_sock_map, buf);
+                        handle_messages(b1 ,pid, 0, pid_sock_map, mid_q, buf);
 
 
                     }

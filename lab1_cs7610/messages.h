@@ -41,3 +41,11 @@ struct CompareMessage {
         return p1.msg_id > p2.msg_id;
     }
 };
+struct CompareSeqMessage {
+    bool operator()(SeqMessage const& p1, SeqMessage const& p2)
+    {
+        // return "true" if "p1" is ordered
+        // before "p2", for example:
+        return p1.final_seq > p2.final_seq;
+    }
+};
