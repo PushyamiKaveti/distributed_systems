@@ -225,7 +225,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             while (!final_mesg_q.empty()) {
                 Mesg_pq p = final_mesg_q.top();
                 if (p.msg_id == b->msg_id ){
-                    Mesg_pq m_pq {p.msg_id , b->final_seq, true};
+                    Mesg_pq m_pq {p.msg_id ,b->sender, b->final_seq, true};
                     tmp_q.push(m_pq);
                 }
                 else{
