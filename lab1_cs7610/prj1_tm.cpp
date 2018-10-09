@@ -34,7 +34,7 @@ using namespace std;
 map <uint32_t , DataMessage*> mid_message_map;
 map <uint32_t , bool > mid_delivery_status_map;
 multimap <uint32_t , AckMessage> ack_q;
-priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
+
 
 // preparing the sockets from host names file
 void *get_in_addr(struct sockaddr *sa)
@@ -154,7 +154,7 @@ std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue
     return tmp_q;
 }
 // function to handle the received messages
-void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, char* buf){
+void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq,priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q, char* buf){
 
     printf(" with type : \"%d  \"\n", ty);
     switch(ty){
@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
     queue <uint32_t > mid_q;
     int agreed_seq = 0;
     int proposed_seq = 0;
-
+    priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
 
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
@@ -449,7 +449,7 @@ int main(int argc, char *argv[])
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid,pid_sock_map, mid_q, fdmax, writefds, receive_fd ,agreed_seq,proposed_seq,buf);
+                        handle_messages(b1 ,pid,pid_sock_map, mid_q, fdmax, writefds, receive_fd ,agreed_seq,proposed_seq, final_mesg_q, buf);
 
 
                     }
