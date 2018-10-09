@@ -25,5 +25,8 @@ int main()
         Q.pop();
         cout << p.msg_id << " " << p.type << "\n";
     }
+
+    uint32_t t = strtoul("m2", NULL,2);
+    cout<<t<<"\n";
     return 0;
 }

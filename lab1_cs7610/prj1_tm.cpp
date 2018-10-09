@@ -173,7 +173,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             else
                 p_seq = a_seq+1;
 
-            Mesg_pq m_pq{b->msg_id, b->sender, (uint32_t )(p_seq), false};
+            Mesg_pq m_pq{b->msg_id, b->sender, (uint32_t )(p_seq), pid, false};
             final_mesg_q.push(m_pq);
 
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(p_seq), pid };
@@ -225,7 +225,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             while (!final_mesg_q.empty()) {
                 Mesg_pq p = final_mesg_q.top();
                 if (p.msg_id == b->msg_id && p.sender == b->sender){
-                    Mesg_pq m_pq {p.msg_id ,b->sender, b->final_seq, true};
+                    Mesg_pq m_pq {p.msg_id ,b->sender, b->final_seq, b->final_seq_proposer,true};
                     tmp_q.push(m_pq);
                 }
                 else{
@@ -243,7 +243,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
                 Mesg_pq p = final_mesg_q.top();
                 if(p.deliver){
 
-                    cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<p.sender<<" with seq :("<<p.final_seq<<","<<b->final_seq_proposer<<")\n";
+                    cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<p.sender<<" with seq :("<<p.final_seq<<","<<p.final_seq_proposer<<")\n";
                     final_mesg_q.pop();
                 }
                 else

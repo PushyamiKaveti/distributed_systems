@@ -35,6 +35,7 @@ typedef struct {
     uint32_t msg_id;
     uint32_t sender;
     uint32_t final_seq;
+    uint32_t final_seq_proposer;
     bool deliver;
 } Mesg_pq;
 
