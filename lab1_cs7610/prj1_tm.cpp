@@ -77,7 +77,7 @@ void send_mesg(int sock_fd , void* m , uint32_t ty){
         {
 
             s = sizeof (AckMessage);
-            cout<<"sending ack of size"<<s <<"\n";
+
             break;
         }
     }
@@ -397,11 +397,12 @@ int main(int argc, char *argv[])
         freeaddrinfo(servinfo);
     }
 
-
+    this_thread::sleep_for(chrono::seconds(5));
     bool send_m = true;
     int interval=10;
     thread timer_(timer_thread , std::ref(send_m) , std::ref(interval));
     c=1;
+
     // select loop to send and receive messages
     while(1)
     {
