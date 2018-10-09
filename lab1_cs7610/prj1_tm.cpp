@@ -232,12 +232,12 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
                     tmp_q.push(p);
                 }
                 final_mesg_q.pop();
-                cout << final_mesg_q.size()<<"\n";
+
 
             }
             final_mesg_q = tmp_q;
             //deliver the low sequence and deliverable messages
-            cout << final_mesg_q.size()<<"\n";
+            //cout << final_mesg_q.size()<<"\n";
 
             while (!final_mesg_q.empty()){
                 Mesg_pq p = final_mesg_q.top();
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
     int numbytes;
     struct sockaddr_storage their_addr;
     socklen_t addr_len;
-    int num_mesgs = 1;
+    int num_mesgs = 5;
     char host[256];
     char remote_host[256];
     map <uint32_t , int> pid_sock_map;
