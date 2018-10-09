@@ -154,7 +154,7 @@ std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue
     return tmp_q;
 }
 // function to handle the received messages
-void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, char* buf){
+void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, char* buf){
 
     printf("listener: packet contains type \"%d  \"\n", ty);
     switch(ty){
@@ -168,10 +168,15 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pi
             mid_delivery_status_map.insert(pair <uint32_t, bool>(b->msg_id, false));
             //ideally we dont have to give a large sequence number. we can have the proposed sequence number
             // the queue will be reordered when we change the sequnce number
-            Mesg_pq m_pq{b->msg_id, (uint32_t )(seq+1), false};
+            if (p_seq > a_seq)
+                p_seq = p_seq+1;
+            else
+                p_seq = a_seq+1;
+
+            Mesg_pq m_pq{b->msg_id, b->sender, (uint32_t )(p_seq), false};
             final_mesg_q.push(m_pq);
 
-            AckMessage m {2,b->sender,b->msg_id, (uint32_t )(seq+1), pid };
+            AckMessage m {2,b->sender,b->msg_id, (uint32_t )(p_seq), pid };
             //send Ack message tpo the sender of the datamessage
             int sock_fd = pid_sock_map.find(b->sender)->second;
             cout<<"sending ack to sender :"<< pid_sock_map.find(b->sender)->second<<"\n";
@@ -184,28 +189,26 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pi
             AckMessage* b = (AckMessage *)buf;
             cout<<"reaceived ACK for msg:"<<b->msg_id<<"\n";
             ack_q.insert( pair <uint32_t , AckMessage> (b->msg_id , *b));
-            if (check_acks(pid_sock_map, b->msg_id)){
+            if (check_acks(pid_sock_map, b->msg_id)) {
                 //find the maximum of the sequence numbers proposed
-               // pair <multimap<uint32_t ,AckMessage>::iterator, multimap<uint32_t ,AckMessage>::iterator> ret;
-               // ret = ack_q.equal_range(b->msg_id);
-               // uint32_t max_seq = 0;
-               // uint32_t max_seq_proposer = 0;
-               // for (std::multimap<uint32_t ,AckMessage>::iterator it=ret.first; it!=ret.second; ++it){
-               //     AckMessage am = it->second;
-                //    int a_seq = am.proposed_seq;
-                //    if (a_seq > max_seq){
-                //        max_seq = a_seq;
-               //         max_seq_proposer = am.proposer;
-               //     }
-
-                cout<<"received all ACKS\n";
-                SeqMessage seq_m {3,b->sender,b->msg_id,0,0};
-                multicast_mesg(fdmax , writefds, receive_fd, &seq_m , 3);
+                pair<multimap<uint32_t, AckMessage>::iterator, multimap<uint32_t, AckMessage>::iterator> ret;
+                ret = ack_q.equal_range(b->msg_id);
+                uint32_t max_seq = 0;
+                uint32_t max_seq_proposer = 0;
+                for (std::multimap<uint32_t, AckMessage>::iterator it = ret.first; it != ret.second; ++it) {
+                    AckMessage am = it->second;
+                    int a_seq = am.proposed_seq;
+                    if (a_seq > max_seq) {
+                        max_seq = a_seq;
+                        max_seq_proposer = am.proposer;
+                    }
+                }
+                cout << "received all ACKS\n";
+                SeqMessage seq_m{3, b->sender, b->msg_id, max_seq, max_seq_proposer};
+                multicast_mesg(fdmax, writefds, receive_fd, &seq_m, 3);
 
                 // and multicast the final  seq numbner
-                }
-
-
+            }
             break;
         }
 
@@ -214,6 +217,9 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pi
             //handle sequence messages
             SeqMessage* b = (SeqMessage *)buf;
             mid_delivery_status_map[b->msg_id] = true;
+            if (b->final_seq > a_seq)
+                a_seq = b->final_seq;
+
             //reorder the queue
             priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
             while (!final_mesg_q.empty()) {
@@ -230,12 +236,15 @@ void handle_messages(uint32_t ty ,uint32_t pid, int seq , map<uint32_t , int> pi
             }
             final_mesg_q = tmp_q;
             //deliver the low sequence and deliverable messages
+
             while (!final_mesg_q.empty()){
                 Mesg_pq p = final_mesg_q.top();
-                if(p.deliver ){
+                if(p.deliver){
                     final_mesg_q.pop();
-                    cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<"with seq :("<<p.final_seq<<")";
+                    cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<p.sender<<" with seq :("<<p.final_seq<<","<<b->final_seq_proposer<<")\n";
                 }
+                else
+                    break;
             }
                 break;
         }
@@ -268,6 +277,8 @@ int main(int argc, char *argv[])
     char remote_host[256];
     map <uint32_t , int> pid_sock_map;
     queue <uint32_t > mid_q;
+    int agreed_seq = 0;
+    int proposed_seq = 0;
 
 
     FD_ZERO(&writefds);    // clear the write and temp sets
@@ -433,7 +444,7 @@ int main(int argc, char *argv[])
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid, 0, pid_sock_map, mid_q, fdmax, writefds, receive_fd ,buf);
+                        handle_messages(b1 ,pid,pid_sock_map, mid_q, fdmax, writefds, receive_fd ,agreed_seq,proposed_seq,buf);
 
 
                     }

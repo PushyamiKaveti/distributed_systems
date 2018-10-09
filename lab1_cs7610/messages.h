@@ -33,6 +33,7 @@ typedef struct {
 
 typedef struct {
     uint32_t msg_id;
+    uint32_t sender;
     uint32_t final_seq;
     bool deliver;
 } Mesg_pq;
@@ -52,6 +53,10 @@ struct CompareMessage {
     {
         // return "true" if "p1" is ordered
         // before "p2", for example:
-        return p1.final_seq > p2.final_seq;
+        if (p1.final_seq == p2.final_seq)
+            return p1.sender > p2.sender;
+        else
+            return p1.final_seq > p2.final_seq;
+
     }
 };
