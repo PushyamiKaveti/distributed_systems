@@ -197,6 +197,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
                 uint32_t max_seq_proposer = 0;
                 for (std::multimap<uint32_t, AckMessage>::iterator it = ret.first; it != ret.second; ++it) {
                     AckMessage am = it->second;
+                    cout<<"ack details: datamesg sender :"<<am.sender <<" proposer :"<<am.proposer<<"\n";
                     if (am.proposed_seq > max_seq) {
                         max_seq = am.proposed_seq;
                         max_seq_proposer = am.proposer;
@@ -223,7 +224,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
             while (!final_mesg_q.empty()) {
                 Mesg_pq p = final_mesg_q.top();
-                if (p.msg_id == b->msg_id ){
+                if (p.msg_id == b->msg_id && p.sender == b->sender){
                     Mesg_pq m_pq {p.msg_id ,b->sender, b->final_seq, true};
                     tmp_q.push(m_pq);
                 }
