@@ -54,11 +54,11 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
     int i=0;
     if (f.is_open())
     {
-        cout<<"hostnames:\n"<<endl;
+       // cout<<"hostnames:\n"<<endl;
         while (getline(f , line))
         {
             hostnames->push_back(line);
-            cout<<line<<"\n";
+            //cout<<line<<"\n";
         }
         f.close();
     }
@@ -156,7 +156,7 @@ std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue
 // function to handle the received messages
 void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, char* buf){
 
-    printf("listener: packet contains type \"%d  \"\n", ty);
+    printf(" with type : \"%d  \"\n", ty);
     switch(ty){
         case 1:
         {
@@ -335,6 +335,8 @@ int main(int argc, char *argv[])
 
     //loop through the hostnames
     int c=0;
+    cout<<"hosts:\n";
+    cout<<"-----------------\n";
     for (auto &i : hostnames)
     {
 
@@ -343,7 +345,7 @@ int main(int argc, char *argv[])
         hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
         hints.ai_socktype = SOCK_DGRAM;
         hints.ai_flags = AI_PASSIVE; // use my IP
-        cout<<i<<"\n";
+
         if ((rv = getaddrinfo( i.c_str(), port, &hints, &servinfo)) != 0) {
             fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
             return 1;
@@ -360,7 +362,7 @@ int main(int argc, char *argv[])
                 perror("remote: socket");
                 continue;
             }
-
+            cout<<i<<":";
             printf("remote : %s\n",s_tmp);
 
             int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
@@ -438,8 +440,8 @@ int main(int argc, char *argv[])
                             exit(1);
                         }
 
-                        printf("listener: got packet from %s\n", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
-                        printf("listener: packet is %d bytes long\n", numbytes);
+                        printf("got packet from %s", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
+                        //printf("packet is %d bytes long\n", numbytes);
                         buf[numbytes] = '\0';
                         //check the first few bytes and check the type of the message
                         uint32_t b1;
