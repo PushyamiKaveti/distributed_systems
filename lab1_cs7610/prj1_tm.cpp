@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
     int numbytes;
     struct sockaddr_storage their_addr;
     socklen_t addr_len;
-    int num_mesgs = 5;
+    int num_mesgs = 1;
     char host[256];
     char remote_host[256];
     map <uint32_t , int> pid_sock_map;
