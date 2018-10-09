@@ -179,7 +179,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(p_seq), pid };
             //send Ack message tpo the sender of the datamessage
             int sock_fd = pid_sock_map.find(b->sender)->second;
-            cout<<"sending ack to sender :"<< pid_sock_map.find(b->sender)->second<<"\n";
+            cout<<"sending ack to sender :"<< pid_sock_map.find(b->sender)->first<<"\n";
             send_mesg( sock_fd , &m , 2);
             break;
         }
@@ -197,9 +197,8 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
                 uint32_t max_seq_proposer = 0;
                 for (std::multimap<uint32_t, AckMessage>::iterator it = ret.first; it != ret.second; ++it) {
                     AckMessage am = it->second;
-                    int a_seq = am.proposed_seq;
-                    if (a_seq > max_seq) {
-                        max_seq = a_seq;
+                    if (am.proposed_seq > max_seq) {
+                        max_seq = am.proposed_seq;
                         max_seq_proposer = am.proposer;
                     }
                 }
@@ -242,8 +241,9 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             while (!final_mesg_q.empty()){
                 Mesg_pq p = final_mesg_q.top();
                 if(p.deliver){
-                    final_mesg_q.pop();
+
                     cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<p.sender<<" with seq :("<<p.final_seq<<","<<b->final_seq_proposer<<")\n";
+                    final_mesg_q.pop();
                 }
                 else
                     break;
