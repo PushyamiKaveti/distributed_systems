@@ -156,7 +156,7 @@ std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue
 // function to handle the received messages
 void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, char* buf){
 
-    printf(" with type : \"%d  \"\n", ty);
+    //printf(" with type : \"%d  \"\n", ty);
     switch(ty){
         case 1:
         {
@@ -179,7 +179,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             AckMessage m {2,b->sender,b->msg_id, (uint32_t )(p_seq), pid };
             //send Ack message tpo the sender of the datamessage
             int sock_fd = pid_sock_map.find(b->sender)->second;
-            cout<<"sending ack to sender :"<< pid_sock_map.find(b->sender)->first<<"\n";
+            //cout<<"sending ack to sender :"<< pid_sock_map.find(b->sender)->first<<"\n";
             send_mesg( sock_fd , &m , 2);
             break;
         }
@@ -187,7 +187,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
         {
             //handle ack messages
             AckMessage* b = (AckMessage *)buf;
-            cout<<"received ACK for msg:"<<b->msg_id<<"\n";
+            //cout<<"received ACK for msg:"<<b->msg_id<<"\n";
             ack_q.insert( pair <uint32_t , AckMessage> (b->msg_id , *b));
             if (check_acks(pid_sock_map, b->msg_id)) {
                 //find the maximum of the sequence numbers proposed
@@ -197,7 +197,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
                 uint32_t max_seq_proposer = 0;
                 for (std::multimap<uint32_t, AckMessage>::iterator it = ret.first; it != ret.second; ++it) {
                     AckMessage am = it->second;
-                    cout<<"ack details: datamesg sender :"<<am.sender <<" proposer :"<<am.proposer<<"\n";
+                    //cout<<"ack details: datamesg sender :"<<am.sender <<" proposer :"<<am.proposer<<"\n";
                     if (am.proposed_seq > max_seq) {
                         max_seq = am.proposed_seq;
                         max_seq_proposer = am.proposer;
@@ -414,6 +414,7 @@ int main(int argc, char *argv[])
                 DataMessage m {1,pid,c,1};
                 c=c+1;
                 multicast_mesg(fdmax , writefds, receive_fd, &m , 1);
+                cout<<pid<<" : sent message "<<(c-1)<<"\n";
                 send_m = false;
             }
 
@@ -443,8 +444,8 @@ int main(int argc, char *argv[])
                             exit(1);
                         }
 
-                        printf("got packet from %s", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
-                        //printf("packet is %d bytes long\n", numbytes);
+                        //printf("got packet from %s", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
+
                         buf[numbytes] = '\0';
                         //check the first few bytes and check the type of the message
                         uint32_t b1;
