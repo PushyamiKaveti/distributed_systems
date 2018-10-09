@@ -136,7 +136,7 @@ bool check_acks(map<uint32_t, int> pid_sock_map, uint32_t msg_id){
 
 }
 
-std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue(SeqMessage* b, riority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q){
+std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue(SeqMessage* b, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q){
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
     while (!final_mesg_q.empty()) {
         Mesg_pq p = final_mesg_q.top();
