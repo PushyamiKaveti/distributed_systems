@@ -187,7 +187,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
         {
             //handle ack messages
             AckMessage* b = (AckMessage *)buf;
-            cout<<"reaceived ACK for msg:"<<b->msg_id<<"\n";
+            cout<<"received ACK for msg:"<<b->msg_id<<"\n";
             ack_q.insert( pair <uint32_t , AckMessage> (b->msg_id , *b));
             if (check_acks(pid_sock_map, b->msg_id)) {
                 //find the maximum of the sequence numbers proposed
@@ -236,6 +236,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             }
             final_mesg_q = tmp_q;
             //deliver the low sequence and deliverable messages
+            cout << final_mesg_q.size()<<"\n";
 
             while (!final_mesg_q.empty()){
                 Mesg_pq p = final_mesg_q.top();
