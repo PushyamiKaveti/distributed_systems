@@ -9,7 +9,7 @@ using namespace std;
 
 int main()
 {
-    priority_queue<DataMessage, vector<DataMessage>, CompareMessage> Q;
+    priority_queue<DataMessage, vector<DataMessage>, CompareDataMessage> Q;
 
 
     for (int i = 0; i < 5; ++i) {
