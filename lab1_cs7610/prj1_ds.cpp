@@ -491,6 +491,20 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
 
 int main(int argc, char *argv[])
 {
+    uint32_t loss_pid=0;
+    int num_mesg_snapshot=0
+    // All the command line arguments
+    char* port = argv[1];
+    if(argc == 4){
+        loss_pid = (uint32_t ) atoi(argv[3]) ;
+        cout<<loss_pid<<","<<argv[3]<<"\n";
+    }
+    if(argc == 5){
+        num_mesg_snapshot = atoi(argv[4]) ;
+        cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
+    }
+
+
     struct timeval tv;
     fd_set readfds;
     fd_set writefds;
@@ -508,7 +522,7 @@ int main(int argc, char *argv[])
     int rv;
     tv.tv_sec = 0;
     tv.tv_usec = 50000;
-    char* port = argv[1];
+
     vector <string> hostnames;
     char buf[MAXBUFLEN];
     int numbytes;
@@ -521,11 +535,8 @@ int main(int argc, char *argv[])
     int agreed_seq = 0;
     int proposed_seq = 0;
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
-    uint32_t loss_pid=0;
-    if(argc == 4){
-        loss_pid = (uint32_t ) atoi(argv[3]) ;
-        cout<<loss_pid<<","<<argv[2]<<"\n";
-    }
+
+
 
 
     FD_ZERO(&writefds);    // clear the write and temp sets
