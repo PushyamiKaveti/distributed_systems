@@ -225,13 +225,13 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             DataMessage m {1,pid,msg_id,1};
 
             //multicast the message to the group with socket descriptors ( writefds)
-
+            multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1, 0);
+            cout<<pid<<" : resent message: "<<msg_id<<"\n";
             fd_set resend_fds;
             FD_ZERO(&resend_fds);
             pair<bool, fd_set> ack_pair (false , resend_fds);
             itr->second =ack_pair;
-            multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1, 0);
-            cout<<pid<<" : resent message: "<<msg_id<<"\n";
+
             //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
             thread t(timeout_thread , msg_id);
             t.detach();
