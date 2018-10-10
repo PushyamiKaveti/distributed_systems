@@ -201,6 +201,8 @@ void timeout_thread(uint32_t mid)
             cout<<"getting missing acks\n";
             get_missing_acks(mid);
         }
+        else
+            cout<<"NO missing ACKS\n";
     }
 
 
@@ -231,6 +233,7 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             //t.detach();
         }
     }
+    cout<<"exiting check resend\n";
 }
 
 
