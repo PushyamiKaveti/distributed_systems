@@ -310,6 +310,7 @@ int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_o
     cout<<"-----------------\n";
     for (auto &i : hostnames)
     {
+        c=c+1;
         if (strcmp(host, i.c_str()) == 0){
             pid = c;
             cout<<"process id :"<<pid<<"\n";
@@ -349,7 +350,6 @@ int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_o
             if (fdmax < sock_fd){
                 fdmax = sock_fd;
             }
-            c=c+1;
             // add the pid , socked fd pairs to the map
             pid_tcpsock_map.insert(pair <uint32_t , int> (c , sock_fd));
 
