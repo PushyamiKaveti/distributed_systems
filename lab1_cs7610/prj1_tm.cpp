@@ -331,9 +331,10 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
             cout<<"final mesg queue\n";
             while (!final_mesg_q.empty()) {
                 Mesg_pq p = final_mesg_q.top();
-                cout<<"msg_id :"<<p.msg_id<<"\n";
-                cout<<"sender :"<<p.sender<<"\n";
+
                 if (p.msg_id == b->msg_id && p.sender == b->sender){
+                    cout<<"msg_id :"<<p.msg_id<<"\n";
+                    cout<<"sender :"<<p.sender<<"\n";
                     Mesg_pq m_pq {p.msg_id ,b->sender, b->final_seq, b->final_seq_proposer,true};
                     tmp_q.push(m_pq);
                 }
@@ -350,6 +351,8 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
 
             while (!final_mesg_q.empty()){
                 Mesg_pq p = final_mesg_q.top();
+                cout<<"msg_id :"<<p.msg_id<<"\n";
+                cout<<"sender :"<<p.sender<<"\n";
                 if(p.deliver){
 
                     cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<p.sender<<" with seq :("<<p.final_seq<<","<<p.final_seq_proposer<<")\n";
