@@ -101,16 +101,16 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
     map<uint32_t , int>::iterator it = pid_sock_map.find(loss_pid);
     if (it != pid_sock_map.end())
         loss_fd= it->second;
-    cout<<"simulating messages loss for pid :"<<loss_pid;
+    cout<<"simulating messages loss for pid :"<<loss_pid<<"\n";
     for (int i=0 ; i <=fdmax ;i++)
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
         {
             if (i == loss_fd) {
-                cout << "loss for " << loss_pid;
+                cout << "loss for " << loss_pid<<"\n";
                 continue;
             }
-            cout<<"this";
+
             switch (ty){
                 case 1 :
                 {
@@ -145,6 +145,7 @@ void periodic_timer_thread(bool& s, int& interval)
 bool check_acks( uint32_t msg_id){
 
     int num_acks = ack_q.count(msg_id);
+    cout<<"checking if all acks are received\n";
     if (num_acks == pid_sock_map.size()){
         return true;
     }
@@ -156,7 +157,7 @@ void get_missing_acks(uint32_t mid){
     pair<multimap<uint32_t, AckMessage>::iterator, multimap<uint32_t, AckMessage>::iterator> ret;
     map<uint32_t , int > ::iterator pid_itr;
     ret = ack_q.equal_range(mid);
-    bool found=false;
+    bool found, resend_ack=false;
     fd_set resend_fds;
     // go through all the pids and check if that process sent an ack
     for (pid_itr = pid_sock_map.begin() ; pid_itr != pid_sock_map.end(); ++pid_itr){
@@ -170,14 +171,15 @@ void get_missing_acks(uint32_t mid){
 
         }
         if (!found){
-
+            cout<<"ack not received from pid:"<<pid_itr->first<<"\n";
+            resend_ack = true;
             FD_SET(pid_itr->second, &resend_fds);
         }
 
     }
     pair<bool, fd_set> ack_pair = resend_map.find(mid)->second;
     //set the rsend boolean to true and fill the fd-set with socket fds of pids to be used for resend
-    resend_map.find(mid)->second = pair <bool, fd_set>(true , resend_fds);
+    resend_map.find(mid)->second = pair <bool, fd_set>(resend_ack , resend_fds);
 }
 
 void timeout_thread(uint32_t mid)
@@ -186,7 +188,9 @@ void timeout_thread(uint32_t mid)
     this_thread::sleep_for(chrono::seconds(bounded_delay));
     map<uint32_t , pair <bool, fd_set>> ::iterator it = resend_map.find(mid);
     if (it != resend_map.end()){
+        cout<<"timeout for acks started for message:"<<mid<<"\n";
         if (!check_acks(mid)){
+            cout<<"getting missing acks\n";
             get_missing_acks(mid);
         }
     }
@@ -212,7 +216,7 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             itr->second = pair<bool, fd_set> (false, resend_fds);
             //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
             //thread t(timeout_thread , msg_id);
-           // t.detach();
+            //t.detach();
         }
     }
 }
