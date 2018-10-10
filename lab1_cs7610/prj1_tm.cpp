@@ -207,12 +207,12 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             //multicast the message to the group with socket descriptors ( writefds)
             //multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1);
             //cout<<pid<<" : resent message: "<<msg_id<<"\n";
-            //fd_set resend_fds;
-            //FD_ZERO(&resend_fds);
-            //itr->second = pair<bool, fd_set> (false, resend_fds);
+            fd_set resend_fds;
+            FD_ZERO(&resend_fds);
+            itr->second = pair<bool, fd_set> (false, resend_fds);
             //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
             //thread t(timeout_thread , msg_id);
-            //t.detach();
+           // t.detach();
         }
     }
 }
