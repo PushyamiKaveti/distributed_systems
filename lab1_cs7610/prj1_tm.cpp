@@ -124,6 +124,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
                 }
 
             }
+            cout<<"sent message : "<<ty<<"\n";
             if (send(i, m, s, 0) == -1) {
                 perror("send");
             }
@@ -186,7 +187,6 @@ void get_missing_acks(uint32_t mid){
         pair<bool, fd_set> resend_pair = itr->second;
         cout << "checking resend map for message :" << msg_id << "\n";
         cout<<resend_pair.first<<"\n";
-        cout<<FD_ISSET(5,&resend_pair.second)<<"\n";
     }
 }
 
@@ -224,7 +224,8 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             //cout<<pid<<" : resent message: "<<msg_id<<"\n";
             fd_set resend_fds;
             FD_ZERO(&resend_fds);
-            itr->second = pair<bool, fd_set> (false, resend_fds);
+            pair<bool, fd_set> ack_pair (false , resend_fds);
+            itr->second =ack_pair;
             //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
             //thread t(timeout_thread , msg_id);
             //t.detach();
