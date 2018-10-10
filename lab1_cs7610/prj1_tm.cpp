@@ -222,18 +222,19 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
         if (resend_pair.first){
             cout<<pid <<" : resending message :"<<msg_id;
             //create Data message
-           // DataMessage m {1,pid,msg_id,1};
+            DataMessage m {1,pid,msg_id,1};
 
             //multicast the message to the group with socket descriptors ( writefds)
-            //multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1);
-            //cout<<pid<<" : resent message: "<<msg_id<<"\n";
+
             fd_set resend_fds;
             FD_ZERO(&resend_fds);
             pair<bool, fd_set> ack_pair (false , resend_fds);
             itr->second =ack_pair;
+            multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1, 0);
+            cout<<pid<<" : resent message: "<<msg_id<<"\n";
             //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
-            //thread t(timeout_thread , msg_id);
-            //t.detach();
+            thread t(timeout_thread , msg_id);
+            t.detach();
         }
     }
     //cout<<"exiting check resend\n";
@@ -535,20 +536,24 @@ int main(int argc, char *argv[])
                 DataMessage m {1,pid,(uint32_t )counter,1};
 
                 cout<<pid<<" : sent message: "<<counter<<"\n";
-               // fd_set resend_fds;
-               // FD_ZERO(&resend_fds);
-                //resend_map.insert(pair <uint32_t, pair<bool,fd_set>>((uint32_t)counter, pair<bool, fd_set> (false,resend_fds)));
-                //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
-                //thread t(timeout_thread , counter);
-                //t.detach();
+                fd_set resend_fds;
+                FD_ZERO(&resend_fds);
+                resend_map.insert(pair <uint32_t, pair<bool,fd_set>>((uint32_t)counter, pair<bool, fd_set> (false,resend_fds)));
                 counter=counter+1;
                 //multicast the message to the group with socket descriptors ( writefds)
                 multicast_mesg(fdmax , writefds, receive_fd, &m , 1 , loss_pid);
+                //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
+                thread t(timeout_thread , counter);
+                t.detach();
+
                 send_m = false;
             }
 
         }
 
+        //cout<<"select loop"<<"\n";
+        //check if the resend map is set and resend the data messages which are lost
+        check_resend(pid, fdmax, receive_fd );
 
         readfds = original;
         rv = select(fdmax+1, &readfds, NULL, NULL, &tv);
@@ -592,9 +597,7 @@ int main(int argc, char *argv[])
 
         }
 
-        //cout<<"select loop"<<"\n";
-        //check if the resend map is set and resend the data messages which are lost
-        //check_resend(pid, fdmax, receive_fd );
+
     }
     timer_.join();
     //
