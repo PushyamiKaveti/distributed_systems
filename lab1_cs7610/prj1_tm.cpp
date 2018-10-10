@@ -233,7 +233,7 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             //t.detach();
         }
     }
-    cout<<"exiting check resend\n";
+    //cout<<"exiting check resend\n";
 }
 
 
@@ -549,7 +549,7 @@ int main(int argc, char *argv[])
             perror("select"); // error occurred in select()
             exit(1);
         } else if (rv == 0) {
-           // printf("Timeout occurred!  No data after 5 seconds.\n");
+           printf("Timeout occurred!  No data after 5 seconds.\n");
         } else {
 
             // one of the descriptors have data
