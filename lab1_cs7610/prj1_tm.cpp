@@ -535,6 +535,7 @@ int main(int argc, char *argv[])
                 //t.detach();
                 counter=counter+1;
                 //multicast the message to the group with socket descriptors ( writefds)
+                multicast_mesg(fdmax , writefds, receive_fd, &m , 1 , loss_pid);
                 send_m = false;
             }
 
