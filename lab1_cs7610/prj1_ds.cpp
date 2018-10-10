@@ -740,7 +740,7 @@ int main(int argc, char *argv[])
 
                     } else {
                          // receiving in any other sockets means it is the snapshot algorithm messages
-                         
+
                     }
                 }
 
@@ -750,7 +750,7 @@ int main(int argc, char *argv[])
 
         }
 
-        //cout<<"select loop"<<"\n";
+         //cout<<"select loop"<<"\n";
         //check if the resend map is set and resend the data messages which are lost
         check_resend(pid, fdmax, receive_fd );
     }
