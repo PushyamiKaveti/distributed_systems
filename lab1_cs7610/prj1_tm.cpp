@@ -523,6 +523,7 @@ int main(int argc, char *argv[])
             }
 
         }
+        cout<<"select loop"<<"\n";
         //check if the resend map is set and resend the data messages which are lost
         check_resend(pid, fdmax, receive_fd );
 
