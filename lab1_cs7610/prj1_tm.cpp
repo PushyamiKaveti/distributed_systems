@@ -101,13 +101,16 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
     map<uint32_t , int>::iterator it = pid_sock_map.find(loss_pid);
     if (it != pid_sock_map.end())
         loss_fd= it->second;
-
+    cout<<"simulating messages loss for pid :"<<loss_pid;
     for (int i=0 ; i <=fdmax ;i++)
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
         {
-            if (i == loss_fd)
+            if (i == loss_fd) {
+                cout << "loss for " << loss_pid;
                 continue;
+            }
+            cout<<"this";
             switch (ty){
                 case 1 :
                 {
