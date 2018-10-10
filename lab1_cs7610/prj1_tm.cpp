@@ -200,10 +200,13 @@ void timeout_thread(uint32_t mid)
 
 void check_resend(uint32_t pid, int fdmax, int receive_fd){
     map<uint32_t , pair<bool,fd_set>>::iterator itr ;
+    uint32_t msg_id;
     for (itr = resend_map.begin() ; itr != resend_map.end(); ++itr){
-        uint32_t msg_id = itr->first;
+        msg_id = itr->first;
+        pair<bool, fd_set> resend_pair = itr->second;
+        cout<<"checking resend for message :"<<msg_id;
         // check if the resend flag is set
-        if (itr->second.first){
+        if (resend_pair.first){
             cout<<pid <<" : resending message :"<<msg_id;
             //create Data message
            // DataMessage m {1,pid,msg_id,1};
@@ -523,7 +526,7 @@ int main(int argc, char *argv[])
             }
 
         }
-        cout<<"select loop"<<"\n";
+        //cout<<"select loop"<<"\n";
         //check if the resend map is set and resend the data messages which are lost
         check_resend(pid, fdmax, receive_fd );
 
