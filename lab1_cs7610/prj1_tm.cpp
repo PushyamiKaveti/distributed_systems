@@ -177,16 +177,16 @@ void get_missing_acks(uint32_t mid){
         }
 
     }
-    pair<bool, fd_set> ack_pair = resend_map.find(mid)->second;
+    pair<bool, fd_set> ack_pair (resend_ack , resend_fds);
     map<uint32_t , pair<bool,fd_set>>::iterator itr ;
     //set the rsend boolean to true and fill the fd-set with socket fds of pids to be used for resend
-    resend_map.find(mid)->second = pair <bool, fd_set>(resend_ack , resend_fds);
+    resend_map.find(mid)->second =ack_pair;
     for (itr = resend_map.begin() ; itr != resend_map.end(); ++itr) {
         uint32_t  msg_id = itr->first;
         pair<bool, fd_set> resend_pair = itr->second;
         cout << "checking resend map for message :" << msg_id << "\n";
         cout<<resend_pair.first<<"\n";
-        cout<<resend_pair.second<<"\n";
+        cout<<FD_ISSET(5,&resend_pair.second)<<"\n";
     }
 }
 
