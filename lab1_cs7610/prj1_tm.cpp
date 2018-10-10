@@ -99,9 +99,10 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
     //send messages in a loop to all the hosts
     int loss_fd = -1;
     map<uint32_t , int>::iterator it = pid_sock_map.find(loss_pid);
-    if (it != pid_sock_map.end())
-        loss_fd= it->second;
-    cout<<"simulating messages loss for pid :"<<loss_pid<<"\n";
+    if (it != pid_sock_map.end()) {
+        loss_fd = it->second;
+        cout << "simulating messages loss for pid :" << loss_pid << "\n";
+    }
     for (int i=0 ; i <=fdmax ;i++)
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
@@ -322,11 +323,16 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
             mid_delivery_status_map[b->msg_id] = true;
             if (b->final_seq > a_seq)
                 a_seq = b->final_seq;
-
+            cout<<"received sequence message\n";
+            cout<<"msg_id :"<<b->msg_id<<"\n";
+            cout<<"sender :"<<b->sender<<"\n";
             //reorder the queue
             priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
+            cout<<"final mesg queue\n";
             while (!final_mesg_q.empty()) {
                 Mesg_pq p = final_mesg_q.top();
+                cout<<"msg_id :"<<p.msg_id<<"\n";
+                cout<<"sender :"<<p.sender<<"\n";
                 if (p.msg_id == b->msg_id && p.sender == b->sender){
                     Mesg_pq m_pq {p.msg_id ,b->sender, b->final_seq, b->final_seq_proposer,true};
                     tmp_q.push(m_pq);
