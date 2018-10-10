@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
     char s_tmp[INET6_ADDRSTRLEN];
     int rv;
     tv.tv_sec = 0;
-    tv.tv_usec = 5000;
+    tv.tv_usec = 50000;
     char* port = argv[1];
     vector <string> hostnames;
     char buf[MAXBUFLEN];
