@@ -365,7 +365,7 @@ int main(int argc, char *argv[])
     int proposed_seq = 0;
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
     uint32_t loss_pid;
-    if(argv[2] != NULL)
+    if(argc == 3)
         loss_pid = atoi(argv[2]) ;
 
     FD_ZERO(&writefds);    // clear the write and temp sets
