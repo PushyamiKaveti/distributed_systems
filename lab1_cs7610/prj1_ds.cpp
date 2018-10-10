@@ -1,4 +1,8 @@
 //
+// Created by pushyamik on 10/10/18.
+//
+
+//
 // Created by pushyamik on 10/3/18.
 // TODO : add Gflags for options
 //
@@ -33,6 +37,8 @@ using namespace std;
 
 //map for process ids and socket descriptors
 map <uint32_t , int> pid_sock_map;
+map <uint32_t , int> pid_tcpsock_map;
+
 //map for storing data messages in case we would like to display the messahes - CAN BE REMOVED
 map <uint32_t , DataMessage*> mid_message_map;
 //map for message delivery status _ CAN BE REMOVED. already stored in the structure finalmesgq
@@ -57,11 +63,11 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 {
     ifstream f (hostfile);
     string line;
-   // vector <string> hostnames;
+    // vector <string> hostnames;
     int i=0;
     if (f.is_open())
     {
-       // cout<<"hostnames:\n"<<endl;
+        // cout<<"hostnames:\n"<<endl;
         while (getline(f , line))
         {
             hostnames->push_back(line);
@@ -240,6 +246,139 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
     //cout<<"exiting check resend\n";
 }
 
+int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_original, fd_set& tcp_write_fds, int& tcp_receive_fd, int& fdmax){
+
+    //establish tcp connections beyween processes for snapshot algorithm
+    struct addrinfo hints, *servinfo, *p;
+    char host[256];
+    int rv, sock_fd, pid;
+    gethostname(host , sizeof (host));
+    puts(host);
+
+    // setup socket for listening of markers from other hosts in specified port number
+    //for each hostname get addrssinfo
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE; // use my IP
+
+    if ((rv = getaddrinfo(NULL, "33333", &hints, &servinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        return 1;
+    }
+
+    // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+
+        if ((tcp_receive_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            perror("listener: socket");
+            continue;
+        }
+
+        if (bind(tcp_receive_fd, p->ai_addr, p->ai_addrlen) == -1) {
+            close(tcp_receive_fd);
+            perror("listener: bind");
+            continue;
+        }
+        break;
+    }
+
+    if (p == NULL) {
+        fprintf(stderr, "listener: failed to bind socket\n");
+        return 2;
+    }
+
+    freeaddrinfo(servinfo);
+
+    // listen
+    if (listen(tcp_receive_fd, 10) == -1) {
+        perror("listen");
+        exit(3);
+    }
+
+    fdmax = tcp_receive_fd;
+    // add the listener to the master set
+    FD_SET(tcp_receive_fd, &tcp_original);
+    FD_SET(tcp_receive_fd, &tcp_fds);
+
+    //loop through the hostnames to connect() which means that the port 33333 should be up for listening on the rmeote. which mean bind(), listen() should already be running
+    // so let this sleep()
+    this_thread::sleep_for(chrono::seconds(5));
+    int c=0;
+    cout<<"hosts:\n";
+    cout<<"-----------------\n";
+    for (auto &i : hostnames)
+    {
+        if (strcmp(host, i.c_str()) == 0){
+            pid = c;
+            cout<<"process id :"<<pid<<"\n";
+            break;
+        }
+
+        //for each hostname get addrssinfo
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+        hints.ai_socktype = SOCK_STREAM;
+
+        if ((rv = getaddrinfo( i.c_str(), "33333", &hints, &servinfo)) != 0) {
+            fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
+            return 1;
+        }
+
+        // loop through all the results and bind to the first we can
+        for(p = servinfo; p != NULL; p = p->ai_next) {
+
+
+            if ((sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+                perror("remote: socket");
+                continue;
+            }
+            //cout<<i<<":";
+            //printf("remote : %s\n",s_tmp);
+
+            int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
+            if (res <0)
+            {
+                perror("remote: unable to connect()");
+                continue;
+            }
+            //add the socket desc to the list of writefds, add to readfds as well
+            //store all the socket descriptors in fd sets
+            FD_SET(sock_fd , &tcp_write_fds);
+            if (fdmax < sock_fd){
+                fdmax = sock_fd;
+            }
+            c=c+1;
+            // add the pid , socked fd pairs to the map
+            pid_tcpsock_map.insert(pair <uint32_t , int> (c , sock_fd));
+
+            break;
+        }
+
+        if (p == NULL) {
+            fprintf(stderr, "remote: failed to create socket\n");
+            return 2;
+        }
+
+        freeaddrinfo(servinfo);
+    }
+}
+
+void snaphot_algo(){
+
+}
+
+void marker_sending(){
+
+}
+
+void marker_receiving(){
+
+}
+
+
+
 
 // function to handle the received messages
 void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, char* buf){
@@ -344,7 +483,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
                 else
                     break;
             }
-                break;
+            break;
         }
 
     }
@@ -356,9 +495,14 @@ int main(int argc, char *argv[])
     fd_set readfds;
     fd_set writefds;
     fd_set original;
+
+    fd_set tcp_readfds;
+    fd_set tcp_writefds;
+
+
     int fdmax;
     uint32_t pid;
-    int receive_fd, sock_fd;
+    int receive_fd, sock_fd, tcp_receive_fd;
     char s[INET6_ADDRSTRLEN];
     char s_tmp[INET6_ADDRSTRLEN];
     int rv;
@@ -390,7 +534,8 @@ int main(int argc, char *argv[])
 
     //read the file and get all hostnames
     get_hostnames(argv[2] , &hostnames);
-    // setup sockets for each of the hosts ion specified port number
+
+    // setup sockets for each of the hosts in specified port number
     //for each hostname get addrssinfo
     struct addrinfo hints, *servinfo, *p;
     memset(&hints, 0, sizeof hints);
@@ -498,6 +643,14 @@ int main(int argc, char *argv[])
 
         freeaddrinfo(servinfo);
     }
+
+    FD_ZERO(&tcp_writefds);    // clear the write and temp sets
+    FD_ZERO(&tcp_readfds);
+
+
+    //Initialize tcp sockets
+    initialize_sockets(hostnames , tcp_readfds, original, tcp_writefds, tcp_receive_fd , fdmax);
+
     //sleep for 5 seconds so that we can setup the other processes
     this_thread::sleep_for(chrono::seconds(5));
     //boolean for sending messages
@@ -542,18 +695,18 @@ int main(int argc, char *argv[])
             perror("select"); // error occurred in select()
             exit(1);
         } else if (rv == 0) {
-           //printf("Timeout occurred!  No data after 5 seconds.\n");
+            //printf("Timeout occurred!  No data after 5 seconds.\n");
         } else {
 
             // one of the descriptors have data
             for (int i =0; i<=fdmax ; i++){
 
                 if (FD_ISSET(i, &readfds)) {
-                    if(i == receive_fd){
+                    if (i == receive_fd) {
                         // received message
                         addr_len = sizeof their_addr;
-                        if ((numbytes = recvfrom(i, buf, MAXBUFLEN-1 , 0,
-                                                 (struct sockaddr *)&their_addr, &addr_len)) == -1) {
+                        if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0,
+                                                 (struct sockaddr *) &their_addr, &addr_len)) == -1) {
                             perror("recvfrom");
                             exit(1);
                         }
@@ -563,14 +716,34 @@ int main(int argc, char *argv[])
                         buf[numbytes] = '\0';
                         //check the first few bytes and check the type of the message
                         uint32_t b1;
-                        memcpy(&b1 , &buf, sizeof(uint32_t));
+                        memcpy(&b1, &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid, mid_q, fdmax, writefds, receive_fd ,agreed_seq,proposed_seq, final_mesg_q , buf);
+                        handle_messages(b1, pid, mid_q, fdmax, writefds, receive_fd, agreed_seq, proposed_seq,
+                                        final_mesg_q, buf);
 
 
+                    } else if (i == tcp_receive_fd) {
+                        // handle new connections
+                        sock_fd = accept(tcp_receive_fd, (struct sockaddr *) &their_addr, &addr_len);
+
+                        if (sock_fd == -1) {
+                            perror("accept");
+                        } else {
+                            FD_SET(sock_fd, &original); // add to master set
+                            if (sock_fd > fdmax) {    // keep track of the max
+                                fdmax = sock_fd;
+                            }
+                            printf(" new connection from %s on socket %d\n",
+                                   inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), s,
+                                             INET6_ADDRSTRLEN), sock_fd);
+                        }
+
+                    } else {
+                         // receiving in any other sockets means it is the snapshot algorithm messages
+                         
                     }
-
                 }
+
 
             }
 
