@@ -539,13 +539,13 @@ int main(int argc, char *argv[])
                 fd_set resend_fds;
                 FD_ZERO(&resend_fds);
                 resend_map.insert(pair <uint32_t, pair<bool,fd_set>>((uint32_t)counter, pair<bool, fd_set> (false,resend_fds)));
-                counter=counter+1;
+
                 //multicast the message to the group with socket descriptors ( writefds)
                 multicast_mesg(fdmax , writefds, receive_fd, &m , 1 , loss_pid);
                 //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
                 thread t(timeout_thread , counter);
                 t.detach();
-
+                counter=counter+1;
                 send_m = false;
             }
 
