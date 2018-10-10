@@ -106,10 +106,6 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
         {
-            if (i == loss_fd) {
-                cout << "loss for " << loss_pid<<"\n";
-                continue;
-            }
 
             switch (ty){
                 case 1 :
@@ -124,9 +120,15 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
                 }
 
             }
-            cout<<"sent message : "<<ty<<"\n";
-            if (send(i, m, s, 0) == -1) {
-                perror("send");
+            if (i == loss_fd) {
+                cout << "loss for " << loss_pid<<"\n";
+
+            }
+            else {
+                cout << "sent message : " << ty << "\n";
+                if (send(i, m, s, 0) == -1) {
+                    perror("send");
+                }
             }
         }
     }
@@ -257,7 +259,7 @@ std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue
 // function to handle the received messages
 void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, char* buf){
 
-    //printf(" with type : \"%d  \"\n", ty);
+    printf(" with type : \"%d  \"\n", ty);
     switch(ty){
         case 1:
         {
@@ -524,8 +526,6 @@ int main(int argc, char *argv[])
                 //create Data message
                 DataMessage m {1,pid,(uint32_t )counter,1};
 
-                //multicast the message to the group with socket descriptors ( writefds)
-                multicast_mesg(fdmax , writefds, receive_fd, &m , 1 , loss_pid);
                 cout<<pid<<" : sent message: "<<counter<<"\n";
                // fd_set resend_fds;
                // FD_ZERO(&resend_fds);
@@ -534,6 +534,7 @@ int main(int argc, char *argv[])
                 //thread t(timeout_thread , counter);
                 //t.detach();
                 counter=counter+1;
+                //multicast the message to the group with socket descriptors ( writefds)
                 send_m = false;
             }
 
