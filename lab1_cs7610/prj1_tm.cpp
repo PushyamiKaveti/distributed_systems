@@ -31,10 +31,17 @@
 #define MAXBUFLEN 100
 using namespace std;
 
+//map for process ids and socket descriptors
+map <uint32_t , int> pid_sock_map;
+//map for storing data messages in case we would like to display the messahes - CAN BE REMOVED
 map <uint32_t , DataMessage*> mid_message_map;
+//map for message delivery status _ CAN BE REMOVED. already stored in the structure finalmesgq
 map <uint32_t , bool > mid_delivery_status_map;
+//map of messages and ack to keep track of receibed acks
 multimap <uint32_t , AckMessage> ack_q;
-
+//resend map
+map <uint32_t , pair <bool, fd_set > > resend_map;
+int bounded_delay = 30;
 
 // preparing the sockets from host names file
 void *get_in_addr(struct sockaddr *sa)
@@ -87,15 +94,20 @@ void send_mesg(int sock_fd , void* m , uint32_t ty){
     }
 }
 
-void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint32_t ty){
+void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint32_t ty, uint32_t loss_pid){
     int s=0;
     //send messages in a loop to all the hosts
+    int loss_fd = -1;
+    map<uint32_t , int>::iterator it = pid_sock_map.find(loss_pid);
+    if (it != pid_sock_map.end())
+        loss_fd= it->second;
+
     for (int i=0 ; i <=fdmax ;i++)
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
         {
-            //char mesg[MAXBUFLEN]="hellow";
-            //send(i,mesg, strlen(mesg), 0)
+            if (i == loss_fd)
+                continue;
             switch (ty){
                 case 1 :
                 {
@@ -117,7 +129,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
 }
 
 //a timer
-void timer_thread(bool& s, int& interval)
+void periodic_timer_thread(bool& s, int& interval)
 {
 
     while(1) {
@@ -126,7 +138,8 @@ void timer_thread(bool& s, int& interval)
     }
 }
 
-bool check_acks(map<uint32_t, int> pid_sock_map, uint32_t msg_id){
+
+bool check_acks( uint32_t msg_id){
 
     int num_acks = ack_q.count(msg_id);
     if (num_acks == pid_sock_map.size()){
@@ -135,6 +148,72 @@ bool check_acks(map<uint32_t, int> pid_sock_map, uint32_t msg_id){
     return false;
 
 }
+
+void get_missing_acks(uint32_t mid){
+    pair<multimap<uint32_t, AckMessage>::iterator, multimap<uint32_t, AckMessage>::iterator> ret;
+    map<uint32_t , int > ::iterator pid_itr;
+    ret = ack_q.equal_range(mid);
+    bool found=false;
+    fd_set resend_fds;
+    // go through all the pids and check if that process sent an ack
+    for (pid_itr = pid_sock_map.begin() ; pid_itr != pid_sock_map.end(); ++pid_itr){
+        found=false;
+        for (std::multimap<uint32_t, AckMessage>::iterator it = ret.first; it != ret.second; ++it) {
+            AckMessage am = it->second;
+            if(am.proposer == pid_itr->first){
+                found = true;
+                break;
+            }
+
+        }
+        if (!found){
+
+            FD_SET(pid_itr->second, &resend_fds);
+        }
+
+    }
+    pair<bool, fd_set> ack_pair = resend_map.find(mid)->second;
+    //set the rsend boolean to true and fill the fd-set with socket fds of pids to be used for resend
+    resend_map.find(mid)->second = pair <bool, fd_set>(true , resend_fds);
+}
+
+void timeout_thread(uint32_t mid)
+{
+
+    this_thread::sleep_for(chrono::seconds(bounded_delay));
+    map<uint32_t , pair <bool, fd_set>> ::iterator it = resend_map.find(mid);
+    if (it != resend_map.end()){
+        if (!check_acks(mid)){
+            get_missing_acks(mid);
+        }
+    }
+
+
+}
+
+void check_resend(uint32_t pid, int fdmax, int receive_fd){
+    map<uint32_t , pair<bool,fd_set>>::iterator itr ;
+    for (itr = resend_map.begin() ; itr != resend_map.end(); ++itr){
+        uint32_t msg_id = itr->first;
+        // check if the resend flag is set
+        if (itr->second.first){
+            cout<<pid <<" : resending message :"<<msg_id;
+            //create Data message
+           // DataMessage m {1,pid,msg_id,1};
+
+            //multicast the message to the group with socket descriptors ( writefds)
+            //multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1);
+            //cout<<pid<<" : resent message: "<<msg_id<<"\n";
+            //fd_set resend_fds;
+            //FD_ZERO(&resend_fds);
+            //itr->second = pair<bool, fd_set> (false, resend_fds);
+            //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
+            //thread t(timeout_thread , msg_id);
+            //t.detach();
+        }
+    }
+}
+
 
 std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue(SeqMessage* b, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q){
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
@@ -154,7 +233,7 @@ std::priority_queue<Mesg_pq, std::vector<Mesg_pq>, CompareMessage> reorder_queue
     return tmp_q;
 }
 // function to handle the received messages
-void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, char* buf){
+void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, char* buf){
 
     //printf(" with type : \"%d  \"\n", ty);
     switch(ty){
@@ -189,7 +268,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
             AckMessage* b = (AckMessage *)buf;
             //cout<<"received ACK for msg:"<<b->msg_id<<"\n";
             ack_q.insert( pair <uint32_t , AckMessage> (b->msg_id , *b));
-            if (check_acks(pid_sock_map, b->msg_id)) {
+            if (check_acks(b->msg_id)) {
                 //find the maximum of the sequence numbers proposed
                 pair<multimap<uint32_t, AckMessage>::iterator, multimap<uint32_t, AckMessage>::iterator> ret;
                 ret = ack_q.equal_range(b->msg_id);
@@ -205,7 +284,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, map<uint32_t , int> pid_sock_map
                 }
                 cout << "received all ACKS\n";
                 SeqMessage seq_m{3, b->sender, b->msg_id, max_seq, max_seq_proposer};
-                multicast_mesg(fdmax, writefds, receive_fd, &seq_m, 3);
+                multicast_mesg(fdmax, writefds, receive_fd, &seq_m, 3, 0);
 
                 // and multicast the final  seq numbner
             }
@@ -278,11 +357,13 @@ int main(int argc, char *argv[])
     int num_mesgs = 5;
     char host[256];
     char remote_host[256];
-    map <uint32_t , int> pid_sock_map;
     queue <uint32_t > mid_q;
     int agreed_seq = 0;
     int proposed_seq = 0;
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
+    uint32_t loss_pid;
+    if(argv[2] != NULL)
+        loss_pid = atoi(argv[2]) ;
 
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
@@ -398,28 +479,42 @@ int main(int argc, char *argv[])
 
         freeaddrinfo(servinfo);
     }
-
+    //sleep for 5 seconds so that we can setup the other processes
     this_thread::sleep_for(chrono::seconds(5));
+    //boolean for sending messages
     bool send_m = true;
+    //time interval between sending consecutive messages
     int interval=10;
-    thread timer_(timer_thread , std::ref(send_m) , std::ref(interval));
-    c=1;
+    //timer for sending messages at regular time intervals
+    thread timer_(periodic_timer_thread , std::ref(send_m) , std::ref(interval));
+    //message counter
+    int counter=1;
 
     // select loop to send and receive messages
     while(1)
     {
-
+        // if the timer goes off send the next message
         if (send_m){
-            if (c <= num_mesgs){
-                DataMessage m {1,pid,c,1};
-                c=c+1;
-                multicast_mesg(fdmax , writefds, receive_fd, &m , 1);
-                cout<<pid<<" : sent message "<<(c-1)<<"\n";
+            if (counter <= num_mesgs){
+                //create Data message
+                DataMessage m {1,pid,(uint32_t )counter,1};
+
+                //multicast the message to the group with socket descriptors ( writefds)
+                multicast_mesg(fdmax , writefds, receive_fd, &m , 1 , loss_pid);
+                cout<<pid<<" : sent message: "<<counter<<"\n";
+                fd_set resend_fds;
+                FD_ZERO(&resend_fds);
+                resend_map.insert(pair <uint32_t, pair<bool,fd_set>>((uint32_t)counter, pair<bool, fd_set> (false,resend_fds)));
+                //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
+                thread t(timeout_thread , counter);
+                t.detach();
+                counter=counter+1;
                 send_m = false;
             }
 
         }
-
+        //check if the resend map is set and resend the data messages which are lost
+        check_resend(pid, fdmax, receive_fd );
 
         readfds = original;
         rv = select(fdmax+1, &readfds, NULL, NULL, &tv);
@@ -451,7 +546,7 @@ int main(int argc, char *argv[])
                         uint32_t b1;
                         memcpy(&b1 , &buf, sizeof(uint32_t));
                         //handle the message
-                        handle_messages(b1 ,pid,pid_sock_map, mid_q, fdmax, writefds, receive_fd ,agreed_seq,proposed_seq, final_mesg_q , buf);
+                        handle_messages(b1 ,pid, mid_q, fdmax, writefds, receive_fd ,agreed_seq,proposed_seq, final_mesg_q , buf);
 
 
                     }
