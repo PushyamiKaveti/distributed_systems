@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
     int agreed_seq = 0;
     int proposed_seq = 0;
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
-    uint32_t loss_pid;
+    uint32_t loss_pid=0;
     if(argc == 4){
         loss_pid = (uint32_t ) atoi(argv[3]) ;
         cout<<loss_pid<<","<<argv[2]<<"\n";
