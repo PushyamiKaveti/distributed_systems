@@ -713,7 +713,7 @@ int main(int argc, char *argv[])
                 return 1;
             default:
                 cout<<"bad argument";
-                return;
+                return 1;
         }
     }
 
