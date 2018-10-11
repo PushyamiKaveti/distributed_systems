@@ -497,13 +497,12 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
 
             Mesg_pq p = tmp_q.top();
             match_found = false;
+            ss_q = snapshot.held_back_mesgs;
+            while (!ss_q.empty()){
 
-            while (!snapshot.held_back_mesgs.empty()){
-
-                Mesg_pq q = snapshot.held_back_mesgs.top();
-
-                ss_q.push(q);
-                snapshot.held_back_mesgs.pop();
+                Mesg_pq q = ss_q.top();
+                //ss_q.push(q);
+                ss_q.pop();
 
                 if (q.msg_id == p.msg_id and q.sender == p.sender) {
                     match_found = true;
@@ -524,7 +523,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
 
             }
 
-            snapshot.held_back_mesgs = ss_q;
+            //snapshot.held_back_mesgs = ss_q;
             tmp_q.pop();
         }
 
@@ -842,7 +841,7 @@ int main(int argc, char *argv[])
 
         //check if the anpshot algo has to be instantiated
         if (((counter-1) == num_mesg_snapshot) && (!snapshot_recorded)){
-            cout<<"whats happening here!!::";
+
             //send the marker
             marker_sending(final_mesg_q, (counter-1),pid, fdmax, tcp_writefds);
         }
