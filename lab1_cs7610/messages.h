@@ -76,6 +76,7 @@ struct CompareMessage {
 typedef struct{
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> ordered_mesgs;
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> held_back_mesgs;
+    queue<Mesg_pq> in_channel_mesgs;
     uint32_t  last_seq;
 
 }GlobalState;

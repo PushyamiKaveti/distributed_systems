@@ -452,6 +452,12 @@ void print_snapshot(){
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
         snapshot.held_back_mesgs.pop();
     }
+
+    while(!snapshot.in_channel_mesgs.empty()){
+        Mesg_pq p = snapshot.in_channel_mesgs.top();
+        cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
+        snapshot.in_channel_mesgs.pop();
+    }
     cout<<"last sequence :"<<snapshot.last_seq<<"\n";
 }
 
@@ -505,8 +511,9 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
                 //check if the sender of that message hasnt sent the marker yet
                 map <uint32_t, bool>::iterator it = marker_received.find(p.sender);
                 if(it == marker_received.end())
-                    ss_q.push(p);
-                
+                    //ss_q.push(p);
+                    snapshot.in_channel_mesgs.push(p);
+
             }
             snapshot.held_back_mesgs = ss_q;
             tmp_q.pop();
@@ -517,6 +524,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
     marker_received.insert(pair<uint32_t, bool>(mark->sender, true));
     if (marker_received.size() == pid_sock_map.size()){
         run_snapshot = false;
+        print_snapshot();
         //thread t(print_snapshot);
         //t.detach();
     }
