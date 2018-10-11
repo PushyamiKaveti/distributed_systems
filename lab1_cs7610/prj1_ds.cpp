@@ -486,7 +486,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
     if (marker_received.size() == pid_sock_map.size()){
         run_snapshot = false;
         //print the global snapshot
-        cout<<"global snapshot:\n";
+        /*cout<<"global snapshot:\n";
         cout<<"Messages ordered :";
         while(!snapshot.ordered_mesgs.empty()){
             Mesg_pq p = snapshot.ordered_mesgs.top();
@@ -499,7 +499,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
             cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
             snapshot.held_back_mesgs.pop();
         }
-        cout<<"last sequence :"<<snapshot.last_seq<<"\n";
+        cout<<"last sequence :"<<snapshot.last_seq<<"\n";*/
     }
 }
 
@@ -509,7 +509,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
 // function to handle the received messages
 void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, char* buf){
 
-    //printf(" with type : \"%d  \"\n", ty);
+    printf(" with type : \"%d  \"\n", ty);
     switch(ty){
         case 1:
         {
