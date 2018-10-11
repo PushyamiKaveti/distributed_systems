@@ -330,7 +330,7 @@ int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_o
         if (strcmp(host, i.c_str()) == 0){
             pid = c;
             cout<<"process id :"<<pid<<"\n";
-            break;
+            continue;
         }
 
         //for each hostname get addrssinfo
