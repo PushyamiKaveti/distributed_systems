@@ -802,6 +802,7 @@ int main(int argc, char *argv[])
     // select loop to send and receive messages
     while(1)
     {
+
         //check if the anpshot algo has to be instantiated
         if (((counter-1) == num_mesg_snapshot) && (!snapshot_recorded)){
             cout<<"whats happening here!!::";
@@ -826,6 +827,9 @@ int main(int argc, char *argv[])
                 t.detach();
                 counter=counter+1;
                 send_m = false;
+                cout<<"counter:"<<counter<<"\n";
+                cout<<"num mesg snapshot"<<num_mesg_snapshot<<"\n";
+                cout<<"snapshot recorded"<<snapshot_recorded<<"\n";
             }
 
         }
