@@ -680,6 +680,7 @@ int main(int argc, char *argv[])
     while ((cmd_arg = getopt (argc, argv, "p:h:c:s:")) != -1)
         switch (cmd_arg)
         {
+        cout<<cmd_arg<<"\n";
             case 'p':
             {
                 port = optarg;
