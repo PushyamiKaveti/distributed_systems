@@ -657,19 +657,63 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
 
 int main(int argc, char *argv[])
 {
+
+    // Parse command line arguments
+    // -p port -h hostfile -c number of messages
+    char *cvalue = NULL;
+    int cmd_arg;
+
+    int num_mesgs = 1;
     uint32_t loss_pid=0;
     int num_mesg_snapshot=0;
-    // All the command line arguments
-    char* port = argv[1];
+    char* port;
+    char* hostfile;
     if(argc == 4){
         loss_pid = (uint32_t ) atoi(argv[3]) ;
         cout<<loss_pid<<","<<argv[3]<<"\n";
     }
-    if(argc == 5){
-        num_mesg_snapshot = atoi(argv[4]) ;
-        cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
-    }
+    //if(argc == 5){
+    //    num_mesg_snapshot = atoi(argv[4]) ;
+    //    cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
+    //}
 
+    while ((cmd_arg = getopt (argc, argv, "p:h:c:s:")) != -1)
+        switch (cmd_arg)
+        {
+            case 'p':
+            {
+                port = optarg;
+                break;
+            }
+
+            case 'h':
+            {
+                hostfile = optarg;
+                break;
+            }
+
+            case 'c':{
+                num_mesgs =  atoi(optarg);
+                break;
+            }
+
+            case 's':{
+                num_mesg_snapshot = atoi(optarg);
+            }
+            case '?':
+                if (optopt == 'c' || optopt == 'p'||optopt == 'h'||optopt == 's' )
+                    fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+                else if (isprint (optopt))
+                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+                else
+                    fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+                return 1;
+            default:
+                abort ();
+        }
+
+
+    // All the command line arguments
 
     struct timeval tv;
     fd_set readfds;
@@ -694,7 +738,7 @@ int main(int argc, char *argv[])
     int numbytes;
     struct sockaddr_storage their_addr;
     socklen_t addr_len;
-    int num_mesgs = 1;
+
     char host[256];
     char remote_host[256];
     queue <uint32_t > mid_q;
@@ -710,7 +754,7 @@ int main(int argc, char *argv[])
     FD_ZERO(&original);
 
     //read the file and get all hostnames
-    get_hostnames(argv[2] , &hostnames);
+    get_hostnames(hostfile , &hostnames);
 
     // setup sockets for each of the hosts in specified port number
     //for each hostname get addrssinfo
