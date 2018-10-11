@@ -411,7 +411,7 @@ void copy_queues(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& fina
 
     priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q1;
     final_copy = delivery_queue;
-    while (!delivery_queue.empty()) {
+    while (!final_copy.empty()) {
         Mesg_pq p = final_copy.top();
         tmp_q1.push(p);
         final_copy.pop();
@@ -446,13 +446,13 @@ void print_snapshot(){
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
         snapshot.ordered_mesgs.pop();
     }
-    cout<<"Messages to be ordered :";
+    cout<<"Messages to be ordered :\n";
     while(!snapshot.held_back_mesgs.empty()){
         Mesg_pq p = snapshot.held_back_mesgs.top();
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
         snapshot.held_back_mesgs.pop();
     }
-
+    cout<<"Messages in channel after snapshot recorded :\n";
     while(!snapshot.in_channel_mesgs.empty()){
         Mesg_pq p = snapshot.in_channel_mesgs.front();
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
