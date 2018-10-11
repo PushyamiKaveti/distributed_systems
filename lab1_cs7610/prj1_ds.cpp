@@ -677,10 +677,11 @@ int main(int argc, char *argv[])
     //    cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
     //}
 
-    while ((cmd_arg = getopt (argc, argv, "p:h:c:s:")) != -1)
+    while ((cmd_arg = getopt (argc, argv, "p:h:c:s:")) != -1){
+        cout<<cmd_arg<<"\n";
         switch (cmd_arg)
         {
-        cout<<cmd_arg<<"\n";
+            cout<<cmd_arg<<"\n";
             case 'p':
             {
                 port = optarg;
@@ -713,6 +714,8 @@ int main(int argc, char *argv[])
             default:
                 abort ();
         }
+    }
+
 
 
     // All the command line arguments
