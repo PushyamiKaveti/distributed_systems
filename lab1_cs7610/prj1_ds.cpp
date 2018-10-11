@@ -509,7 +509,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
 // function to handle the received messages
 void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdmax, fd_set writefds, int receive_fd, int& a_seq, int& p_seq, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, char* buf){
 
-    printf(" with type : \"%d  \"\n", ty);
+    //printf(" with type : \"%d  \"\n", ty);
     switch(ty){
         case 1:
         {
@@ -895,7 +895,7 @@ int main(int argc, char *argv[])
                             // got error or connection closed by client
                             if (numbytes == 0) {
                                 // connection closed
-                                printf("selectserver: socket %d hung up\n", i);
+                                //printf("selectserver: socket %d hung up\n", i);
                             } else {
                                 perror("recv");
                             }
