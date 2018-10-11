@@ -668,16 +668,18 @@ int main(int argc, char *argv[])
     int num_mesg_snapshot=0;
     char* port;
     char* hostfile;
-    if(argc == 4){
-        loss_pid = (uint32_t ) atoi(argv[3]) ;
-        cout<<loss_pid<<","<<argv[3]<<"\n";
-    }
+    bool simulate_loss=false;
+
+    //if(argc == 4){
+    //    loss_pid = (uint32_t ) atoi(argv[3]) ;
+    //    cout<<loss_pid<<","<<argv[3]<<"\n";
+    //}
     //if(argc == 5){
     //    num_mesg_snapshot = atoi(argv[4]) ;
     //    cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
     //}
     bool args_provided = false;
-    while ((cmd_arg = getopt (argc, argv, "p:h:c:s:")) != -1){
+    while ((cmd_arg = getopt (argc, argv, "p:h:c:s:l")) != -1){
         args_provided=true;
         switch (cmd_arg)
         {
@@ -701,6 +703,10 @@ int main(int argc, char *argv[])
 
             case 's':{
                 num_mesg_snapshot = atoi(optarg);
+                break;
+            }
+            case 'l':{
+                simulate_loss = true;
                 break;
             }
             case '?':
