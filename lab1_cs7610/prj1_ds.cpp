@@ -400,26 +400,30 @@ void send_markers(int fdmax , fd_set writefds , void* m){
 
 
 void print_snapshot(){
+    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
     //print the global snapshot
     cout<<"--------------------------------------\n";
     cout<<"global snapshot:\n";
     cout<<"Messages ordered :\n";
-    while(!snapshot.ordered_mesgs.empty()){
-        Mesg_pq p = snapshot.ordered_mesgs.top();
+    tmp_q = snapshot.ordered_mesgs;
+    while(!tmp_q.empty()){
+        Mesg_pq p = tmp_q.top();
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
-        snapshot.ordered_mesgs.pop();
+        tmp_q.pop();
     }
     cout<<"Messages to be ordered :\n";
-    while(!snapshot.held_back_mesgs.empty()){
-        Mesg_pq p = snapshot.held_back_mesgs.top();
+    tmp_q = snapshot.held_back_mesgs;
+    while(!tmp_q.empty()){
+        Mesg_pq p = tmp_q.top();
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
-        snapshot.held_back_mesgs.pop();
+        tmp_q.pop();
     }
     cout<<"Messages in channel after snapshot recorded :\n";
-    while(!snapshot.in_channel_mesgs.empty()){
-        Mesg_pq p = snapshot.in_channel_mesgs.front();
+    queue<Mesg_pq> tmp_q1 = snapshot.in_channel_mesgs;
+    while(!tmp_q1.empty()){
+        Mesg_pq p = tmp_q1.front();
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
-        snapshot.in_channel_mesgs.pop();
+        tmp_q1.pop();
     }
     cout<<"last sequence :"<<snapshot.last_seq<<"\n";
     cout<<"--------------------------------------\n";
