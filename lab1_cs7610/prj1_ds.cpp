@@ -828,7 +828,7 @@ int main(int argc, char *argv[])
                 counter=counter+1;
                 send_m = false;
                 cout<<"counter:"<<counter<<"\n";
-                cout<<"num mesg snapshot"<<num_mesg_snapshot<<"\n";
+                //cout<<"num mesg snapshot"<<num_mesg_snapshot<<"\n";
                 cout<<"snapshot recorded"<<snapshot_recorded<<"\n";
             }
 
