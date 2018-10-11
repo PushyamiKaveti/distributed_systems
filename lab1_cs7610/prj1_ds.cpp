@@ -676,9 +676,9 @@ int main(int argc, char *argv[])
     //    num_mesg_snapshot = atoi(argv[4]) ;
     //    cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
     //}
-    cout<<cmd_arg<<"\n";
+
     while ((cmd_arg = getopt (argc, argv, "p:h:c:s:")) != -1){
-        cout<<cmd_arg<<"\n";
+        cout<<cmd_arg<<"1\n";
         switch (cmd_arg)
         {
             cout<<cmd_arg<<"\n";
@@ -712,7 +712,8 @@ int main(int argc, char *argv[])
                     fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
                 return 1;
             default:
-                abort ();
+                cout<<"bad argument";
+                return;
         }
     }
 
