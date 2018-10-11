@@ -430,6 +430,7 @@ void marker_sending(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& f
         Marker m {1, pid};
         send_markers(fdmax, tcp_writefds, &m);
         marker_received.insert(pair<uint32_t, bool>(pid, true));
+        cout<<"marker sent\n";
     }
 
      run_snapshot=true;
@@ -437,7 +438,7 @@ void marker_sending(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& f
 
 void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter,  uint32_t  pid, int fdmax, fd_set& tcp_writefds){
 
-
+    cout<<"Marker Received\n";
     //Check if the state has been recorded already
     if (!snapshot_recorded){
         //record the snapshot state
