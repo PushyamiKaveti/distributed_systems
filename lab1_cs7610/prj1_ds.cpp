@@ -503,8 +503,8 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
     marker_received.insert(pair<uint32_t, bool>(mark->sender, true));
     if (marker_received.size() == pid_sock_map.size()){
         run_snapshot = false;
-        thread t(print_snapshot);
-        t.detach();
+        //thread t(print_snapshot);
+        //t.detach();
     }
 }
 
