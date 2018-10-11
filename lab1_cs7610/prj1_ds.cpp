@@ -804,6 +804,7 @@ int main(int argc, char *argv[])
     {
         //check if the anpshot algo has to be instantiated
         if ((counter-1) == num_mesg_snapshot && !snapshot_recorded){
+            cout<<"whats happening here!!::";
             //send the marker
             marker_sending(final_mesg_q, counter,pid, fdmax, tcp_writefds);
         }
