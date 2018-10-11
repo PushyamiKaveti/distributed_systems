@@ -900,7 +900,7 @@ int main(int argc, char *argv[])
                             // got error or connection closed by client
                             if (numbytes == 0) {
                                 // connection closed
-                                printf("selectserver: socket %d hung up\n", i);
+                                //printf("selectserver: socket %d hung up\n", i);
                             } else {
                                 perror("recv");
                             }
