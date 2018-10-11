@@ -264,6 +264,7 @@ int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_o
     struct addrinfo hints, *servinfo, *p;
     char host[256];
     int rv, sock_fd, pid;
+    int yes=1;
     gethostname(host , sizeof (host));
     puts(host);
 
@@ -287,6 +288,9 @@ int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_o
             perror("listener: socket");
             continue;
         }
+
+        // lose the pesky "address already in use" error message
+        setsockopt(tcp_receive_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
         if (bind(tcp_receive_fd, p->ai_addr, p->ai_addrlen) == -1) {
             close(tcp_receive_fd);
