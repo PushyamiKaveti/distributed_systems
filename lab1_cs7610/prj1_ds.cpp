@@ -142,7 +142,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
 
             }
             else {
-                cout << "sent message : " << ty << "\n";
+                //cout << "sent message : " << ty << "\n";
                 if (send(i, m, s, 0) == -1) {
                     perror("send");
                 }
@@ -167,7 +167,7 @@ void periodic_timer_thread(bool& s, int& interval)
 bool check_acks( uint32_t msg_id){
 
     int num_acks = ack_q.count(msg_id);
-    cout<<"checking if all acks are received\n";
+    //cout<<"checking if all acks are received\n";
     if (num_acks == pid_sock_map.size()){
         return true;
     }
@@ -206,8 +206,8 @@ void get_missing_acks(uint32_t mid){
     for (itr = resend_map.begin() ; itr != resend_map.end(); ++itr) {
         uint32_t  msg_id = itr->first;
         pair<bool, fd_set> resend_pair = itr->second;
-        cout << "checking resend map for message :" << msg_id << "\n";
-        cout<<resend_pair.first<<"\n";
+        //cout << "checking resend map for message :" << msg_id << "\n";
+       // cout<<resend_pair.first<<"\n";
     }
 }
 
@@ -572,17 +572,17 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
             mid_delivery_status_map[b->msg_id] = true;
             if (b->final_seq > a_seq)
                 a_seq = b->final_seq;
-            cout<<"received sequence message\n";
-            cout<<"msg_id :"<<b->msg_id<<"\n";
-            cout<<"sender :"<<b->sender<<"\n";
+            //cout<<"received sequence message\n";
+            //cout<<"msg_id :"<<b->msg_id<<"\n";
+            //cout<<"sender :"<<b->sender<<"\n";
             //reorder the queue
             priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
-            cout<<"final mesg queue\n";
+            //cout<<"final mesg queue\n";
             while (!final_mesg_q.empty()) {
                 Mesg_pq p = final_mesg_q.top();
                 if (p.msg_id == b->msg_id && p.sender == b->sender){
-                    cout<<"msg_id :"<<p.msg_id<<"\n";
-                    cout<<"sender :"<<p.sender<<","<<b->sender<<"\n";
+                    //cout<<"msg_id :"<<p.msg_id<<"\n";
+                    //cout<<"sender :"<<p.sender<<","<<b->sender<<"\n";
                     Mesg_pq m_pq {p.msg_id ,b->sender, b->final_seq, b->final_seq_proposer,true};
                     tmp_q.push(m_pq);
                 }
@@ -599,8 +599,8 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
 
             while (!final_mesg_q.empty()){
                 Mesg_pq p = final_mesg_q.top();
-                cout<<"msg_id :"<<p.msg_id<<"\n";
-                cout<<"sender :"<<p.sender<<"\n";
+                //cout<<"msg_id :"<<p.msg_id<<"\n";
+                //cout<<"sender :"<<p.sender<<"\n";
                 if(p.deliver){
                     delivery_queue.push(p);
                     cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<p.sender<<" with seq :("<<p.final_seq<<","<<p.final_seq_proposer<<")\n";
