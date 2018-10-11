@@ -514,7 +514,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
 
             }
 
-            if(snapshot.held_back_mesgs.empty() && !match_found){
+            if(ss_q.empty() && !match_found){
                 //check if the sender of that message hasnt sent the marker yet
                 map <uint32_t, bool>::iterator it = marker_received.find(p.sender);
                 if(it == marker_received.end())
