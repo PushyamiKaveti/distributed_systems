@@ -401,8 +401,9 @@ void send_markers(int fdmax , fd_set writefds , void* m){
 
 void print_snapshot(){
     //print the global snapshot
+    cout<<"--------------------------------------\n";
     cout<<"global snapshot:\n";
-    cout<<"Messages ordered :";
+    cout<<"Messages ordered :\n";
     while(!snapshot.ordered_mesgs.empty()){
         Mesg_pq p = snapshot.ordered_mesgs.top();
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
@@ -421,6 +422,7 @@ void print_snapshot(){
         snapshot.in_channel_mesgs.pop();
     }
     cout<<"last sequence :"<<snapshot.last_seq<<"\n";
+    cout<<"--------------------------------------\n";
 }
 
 
@@ -497,7 +499,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
             match_found = false;
 
             while (!snapshot.held_back_mesgs.empty()){
-                
+
                 Mesg_pq q = snapshot.held_back_mesgs.top();
 
                 ss_q.push(q);
@@ -505,6 +507,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
 
                 if (q.msg_id == p.msg_id and q.sender == p.sender) {
                     match_found = true;
+                    cout<<"breakkkkkk\n\n";
                     break;
                 }
 
@@ -520,6 +523,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
                     snapshot.in_channel_mesgs.push(p);
 
             }
+
             snapshot.held_back_mesgs = ss_q;
             tmp_q.pop();
         }
