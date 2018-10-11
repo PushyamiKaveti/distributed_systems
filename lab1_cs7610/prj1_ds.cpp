@@ -52,6 +52,8 @@ GlobalState snapshot;
 bool snapshot_recorded= false;
 bool run_snapshot = false;
 map<uint32_t , bool> marker_received;
+bool connection_established = false;
+int num_hosts = 0;
 
 //resend map
 map <uint32_t , pair <bool, fd_set > > resend_map;
@@ -654,7 +656,7 @@ int main(int argc, char *argv[])
     int agreed_seq = 0;
     int proposed_seq = 0;
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
-
+    int num_tcp_cons = 0;
 
 
 
@@ -773,7 +775,7 @@ int main(int argc, char *argv[])
 
         freeaddrinfo(servinfo);
     }
-
+    num_hosts = c;
     FD_ZERO(&tcp_writefds);    // clear the write and temp sets
     FD_ZERO(&tcp_readfds);
 
@@ -801,7 +803,7 @@ int main(int argc, char *argv[])
             marker_sending(final_mesg_q, counter,pid, fdmax, tcp_writefds);
         }
         // if the timer goes off send the next message
-        if (send_m){
+        if (send_m && connection_established){
             if (counter <= num_mesgs){
                 //create Data message
                 DataMessage m {1,pid,(uint32_t )counter,1};
@@ -871,6 +873,9 @@ int main(int argc, char *argv[])
                             printf(" new connection from %s on socket %d\n",
                                    inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), s,
                                              INET6_ADDRSTRLEN), sock_fd);
+                            num_tcp_cons++;
+                            if(num_tcp_cons == (num_hosts-1))
+                                connection_established = true;
                         }
 
                     } else {
