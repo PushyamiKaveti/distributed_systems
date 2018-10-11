@@ -389,10 +389,11 @@ void send_markers(int fdmax , fd_set writefds , void* m){
     {
         if (FD_ISSET(i, &writefds))
         {
-            cout << "sent Marker\n";
+
             if (send(i, m, sizeof (Marker), 0) == -1) {
                 perror("send");
             }
+            cout << "sent Marker\n";
         }
     }
 }
