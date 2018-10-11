@@ -29,7 +29,7 @@
 #include "messages.h"
 #include <map>
 #include <queue>
-
+#include <sstream>
 
 
 #define MAXBUFLEN 100
@@ -47,6 +47,8 @@ map <uint32_t , bool > mid_delivery_status_map;
 //map of messages and ack to keep track of receibed acks
 multimap <uint32_t , AckMessage> ack_q;
 priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> delivery_queue;
+multimap <uint32_t , uint32_t > loss_msgs;
+
 
 GlobalState snapshot;
 bool snapshot_recorded= false;
@@ -110,15 +112,29 @@ void send_mesg(int sock_fd , void* m , uint32_t ty){
     }
 }
 
-void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint32_t ty, uint32_t loss_pid){
+void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint32_t ty){
+
     int s=0;
     //send messages in a loop to all the hosts
-    int loss_fd = -1;
-    map<uint32_t , int>::iterator it = pid_sock_map.find(loss_pid);
-    if (it != pid_sock_map.end()) {
-        loss_fd = it->second;
-        cout << "simulating messages loss for pid :" << loss_pid << "\n";
+    fd_set loss_fds;
+    FD_ZERO(&loss_fds);
+    DataMessage* b;
+
+    if (ty == 1){
+        pair<multimap<uint32_t, uint32_t >::iterator, multimap<uint32_t, uint32_t >::iterator> ret;
+        b = (DataMessage *)m;
+        ret = loss_msgs.equal_range(b->msg_id);
+        for (std::multimap<uint32_t, uint32_t >::iterator it = ret.first; it != ret.second; ++it) {
+            uint32_t  p_id = it->second;
+            map<uint32_t , int>::iterator itr = pid_sock_map.find(p_id);
+            if (itr != pid_sock_map.end()) {
+                FD_SET(it->second, &loss_fds);
+                cout << "simulating messages loss for msg_id :" <<b->msg_id<<"pid :" << p_id << "\n";
+            }
+        }
     }
+
+
     for (int i=0 ; i <=fdmax ;i++)
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
@@ -137,9 +153,10 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
                 }
 
             }
-            if (i == loss_fd) {
-                cout << "loss for " << loss_pid<<"\n";
-
+            if (FD_ISSET(i, &loss_fds)) {
+                cout << "loss for " << b->msg_id<<"\n";
+                std::multimap<uint32_t, uint32_t >::iterator it  = loss_msgs.find(b->msg_id);
+                loss_msgs.erase(it);
             }
             else {
                 //cout << "sent message : " << ty << "\n";
@@ -655,6 +672,31 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
     }
 }
 
+void read_lossfile(char* lossfile){
+    ifstream f (lossfile);
+    string line;
+    // vector <string> hostnames;
+    int i=0;
+    if (f.is_open())
+    {
+        // cout<<"hostnames:\n"<<endl;
+        uint32_t msg_id, p_id;
+        while (getline(f , line))
+        {
+            stringstream ss(line);
+            string item;
+            ss>>item;
+            msg_id = (uint32_t)stoi(item);
+            ss>>item;
+            p_id =  (uint32_t)stoi(item);
+            loss_msgs.insert(pair<uint32_t, uint32_t>(msg_id, p_id));
+            cout<<"loss for m :"<<msg_id<<", p:"<<p_id<<"\n";
+            //cout<<line<<"\n";
+        }
+        f.close();
+    }
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -669,6 +711,7 @@ int main(int argc, char *argv[])
     char* port;
     char* hostfile;
     bool simulate_loss=false;
+    char* lossfile;
 
     //if(argc == 4){
     //    loss_pid = (uint32_t ) atoi(argv[3]) ;
@@ -707,6 +750,7 @@ int main(int argc, char *argv[])
             }
             case 'l':{
                 simulate_loss = true;
+                lossfile = optarg;
                 break;
             }
             case '?':
@@ -762,14 +806,18 @@ int main(int argc, char *argv[])
     priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> final_mesg_q;
     int num_tcp_cons = 0;
 
-
-
+     //---------------------------//
+    // INITIALIZE THE UDP SOCKETS//
+    //---------------------------//
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
     FD_ZERO(&original);
 
     //read the file and get all hostnames
     get_hostnames(hostfile , &hostnames);
+    gethostname(host , sizeof (host));
+    cout<<"My HOST:";
+    cout<<host<<"\n";
 
     // setup sockets for each of the hosts in specified port number
     //for each hostname get addrssinfo
@@ -792,8 +840,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-
-        printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
+        //printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
 
         if (bind(receive_fd, p->ai_addr, p->ai_addrlen) == -1) {
             close(receive_fd);
@@ -809,16 +856,16 @@ int main(int argc, char *argv[])
     }
 
     freeaddrinfo(servinfo);
+
     //add the socket to the list of read fds, add to write fds as well
     FD_SET(receive_fd , &readfds);
     FD_SET(receive_fd , &original);
     fdmax = receive_fd;
-    gethostname(host , sizeof (host));
-    puts(host);
+
 
     //loop through the hostnames
     int c=0;
-    cout<<"hosts:\n";
+    cout<<"All Hosts:\n";
     cout<<"-----------------\n";
     for (auto &i : hostnames)
     {
@@ -866,7 +913,6 @@ int main(int argc, char *argv[])
 
             if (strcmp(host, i.c_str()) == 0){
                 pid = c;
-                cout<<"process id :"<<pid<<"\n";
             }
 
             break;
@@ -879,10 +925,14 @@ int main(int argc, char *argv[])
 
         freeaddrinfo(servinfo);
     }
+
+    cout<<"process id :"<<pid<<"\n";
+
     num_hosts = c;
     FD_ZERO(&tcp_writefds);    // clear the write and temp sets
     FD_ZERO(&tcp_readfds);
-
+    if(simulate_loss)
+        read_lossfile(lossfile);
 
     //Initialize tcp sockets
     initialize_sockets(hostnames , tcp_readfds, original, tcp_writefds, tcp_receive_fd , fdmax);
