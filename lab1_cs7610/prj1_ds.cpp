@@ -457,7 +457,7 @@ void print_snapshot(){
 
 void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter,  uint32_t  pid, int fdmax, fd_set& tcp_writefds){
 
-    cout<<"Marker Received from :"<<mark->sender<<"\n";
+
     //Check if the state has been recorded already
     if (!snapshot_recorded){
         //record the snapshot state
@@ -507,6 +507,7 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
         //thread t(print_snapshot);
         //t.detach();
     }
+    cout<<"Marker Received from :"<<mark->sender<<"\n";
 }
 
 
