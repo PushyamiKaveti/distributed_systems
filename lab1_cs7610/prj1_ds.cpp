@@ -398,44 +398,6 @@ void send_markers(int fdmax , fd_set writefds , void* m){
     }
 }
 
-void copy_queues(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q) {
-    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> final_copy = final_mesg_q;
-    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
-
-    while (!final_copy.empty()) {
-        Mesg_pq p = final_copy.top();
-        tmp_q.push(p);
-        final_copy.pop();
-    }
-    snapshot.held_back_mesgs = tmp_q;
-
-    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q1;
-    final_copy = delivery_queue;
-    while (!final_copy.empty()) {
-        Mesg_pq p = final_copy.top();
-        tmp_q1.push(p);
-        final_copy.pop();
-    }
-    snapshot.ordered_mesgs = tmp_q1;
-}
-
-void marker_sending(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter, uint32_t  pid, int fdmax, fd_set& tcp_writefds){
-
-    //save the state of current pid.
-    // access the delivery queue and holdback queue and the local sequence number agreed sequence number
-    if(!snapshot_recorded){
-        copy_queues(final_mesg_q);
-        snapshot.last_seq = msg_counter;
-        snapshot_recorded = true;
-        //send the marker
-        Marker m {1, pid};
-        send_markers(fdmax, tcp_writefds, &m);
-        marker_received.insert(pair<uint32_t, bool>(pid, true));
-        cout<<"marker sent\n";
-    }
-
-     run_snapshot=true;
-}
 
 void print_snapshot(){
     //print the global snapshot
@@ -460,6 +422,49 @@ void print_snapshot(){
     }
     cout<<"last sequence :"<<snapshot.last_seq<<"\n";
 }
+
+
+void copy_queues(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q) {
+    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> final_copy = final_mesg_q;
+    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
+
+    while (!final_copy.empty()) {
+        Mesg_pq p = final_copy.top();
+        tmp_q.push(p);
+        final_copy.pop();
+    }
+    snapshot.held_back_mesgs = tmp_q;
+
+    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q1;
+    final_copy = delivery_queue;
+    while (!final_copy.empty()) {
+        Mesg_pq p = final_copy.top();
+        tmp_q1.push(p);
+        final_copy.pop();
+    }
+    snapshot.ordered_mesgs = tmp_q1;
+    print_snapshot();
+}
+
+void marker_sending(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter, uint32_t  pid, int fdmax, fd_set& tcp_writefds){
+
+    //save the state of current pid.
+    // access the delivery queue and holdback queue and the local sequence number agreed sequence number
+    if(!snapshot_recorded){
+        copy_queues(final_mesg_q);
+        snapshot.last_seq = msg_counter;
+        snapshot_recorded = true;
+        //send the marker
+        Marker m {1, pid};
+        send_markers(fdmax, tcp_writefds, &m);
+        marker_received.insert(pair<uint32_t, bool>(pid, true));
+        cout<<"marker sent\n";
+    }
+
+     run_snapshot=true;
+}
+
+
 
 void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter,  uint32_t  pid, int fdmax, fd_set& tcp_writefds){
 
