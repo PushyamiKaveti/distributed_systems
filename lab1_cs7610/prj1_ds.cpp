@@ -618,7 +618,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
 int main(int argc, char *argv[])
 {
     uint32_t loss_pid=0;
-    int num_mesg_snapshot=1;
+    int num_mesg_snapshot=0;
     // All the command line arguments
     char* port = argv[1];
     if(argc == 4){
@@ -902,11 +902,10 @@ int main(int argc, char *argv[])
 
                         } else {
                             // we got data on tcp connection which means its a marker message
-                            if(run_snapshot){
+
                                 buf[numbytes] = '\0';
                                 Marker* b = (Marker *)buf;
                                 marker_receiving(b, final_mesg_q, counter, pid, fdmax, tcp_writefds);
-                            }
 
                         }
 
