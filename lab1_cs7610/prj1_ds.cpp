@@ -492,12 +492,12 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
         bool match_found = false;
 
         while (!tmp_q.empty()) {
-            cout<<"while outer\n";
+
             Mesg_pq p = tmp_q.top();
             match_found = false;
 
             while (!snapshot.held_back_mesgs.empty()){
-                cout<<"while inner\n";
+                
                 Mesg_pq q = snapshot.held_back_mesgs.top();
 
                 ss_q.push(q);
