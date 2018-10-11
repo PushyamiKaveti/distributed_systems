@@ -401,7 +401,7 @@ void copy_queues(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& fina
     priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> final_copy = final_mesg_q;
     priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
 
-    while (!final_mesg_q.empty()) {
+    while (!final_copy.empty()) {
         Mesg_pq p = final_copy.top();
         tmp_q.push(p);
         final_copy.pop();
@@ -807,7 +807,7 @@ int main(int argc, char *argv[])
         if (((counter-1) == num_mesg_snapshot) && (!snapshot_recorded)){
             cout<<"whats happening here!!::";
             //send the marker
-            marker_sending(final_mesg_q, counter,pid, fdmax, tcp_writefds);
+            marker_sending(final_mesg_q, (counter-1),pid, fdmax, tcp_writefds);
         }
         // if the timer goes off send the next message
         if (send_m && connection_established){
