@@ -436,6 +436,24 @@ void marker_sending(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& f
      run_snapshot=true;
 }
 
+void print_snapshot(){
+    //print the global snapshot
+    cout<<"global snapshot:\n";
+    cout<<"Messages ordered :";
+    while(!snapshot.ordered_mesgs.empty()){
+        Mesg_pq p = snapshot.ordered_mesgs.top();
+        cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
+        snapshot.ordered_mesgs.pop();
+    }
+    cout<<"Messages to be ordered :";
+    while(!snapshot.held_back_mesgs.empty()){
+        Mesg_pq p = snapshot.held_back_mesgs.top();
+        cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
+        snapshot.held_back_mesgs.pop();
+    }
+    cout<<"last sequence :"<<snapshot.last_seq<<"\n";
+}
+
 void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter,  uint32_t  pid, int fdmax, fd_set& tcp_writefds){
 
     cout<<"Marker Received from :"<<mark->sender<<"\n";
@@ -485,21 +503,8 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
     marker_received.insert(pair<uint32_t, bool>(mark->sender, true));
     if (marker_received.size() == pid_sock_map.size()){
         run_snapshot = false;
-        //print the global snapshot
-        /*cout<<"global snapshot:\n";
-        cout<<"Messages ordered :";
-        while(!snapshot.ordered_mesgs.empty()){
-            Mesg_pq p = snapshot.ordered_mesgs.top();
-            cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
-            snapshot.ordered_mesgs.pop();
-        }
-        cout<<"Messages to be ordered :";
-        while(!snapshot.held_back_mesgs.empty()){
-            Mesg_pq p = snapshot.held_back_mesgs.top();
-            cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
-            snapshot.held_back_mesgs.pop();
-        }
-        cout<<"last sequence :"<<snapshot.last_seq<<"\n";*/
+        thread t(print_snapshot);
+        t.detach();
     }
 }
 
