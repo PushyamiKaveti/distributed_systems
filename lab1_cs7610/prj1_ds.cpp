@@ -478,27 +478,38 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
         //i.e update any incoming messages which is hold back queue
         priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q = final_mesg_q;
         priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> ss_q;
+        bool match_found = false;
+
         while (!tmp_q.empty()) {
             cout<<"while outer\n";
             Mesg_pq p = tmp_q.top();
+            match_found = false;
+
             while (!snapshot.held_back_mesgs.empty()){
                 cout<<"while inner\n";
                 Mesg_pq q = snapshot.held_back_mesgs.top();
+
                 ss_q.push(q);
                 snapshot.held_back_mesgs.pop();
+
                 if (q.msg_id == p.msg_id and q.sender == p.sender) {
-                    tmp_q.pop();
+                    match_found = true;
                     break;
                 }
+
+
+
             }
-            if(snapshot.held_back_mesgs.empty()){
+
+            if(snapshot.held_back_mesgs.empty() && !match_found){
                 //check if the sender of that message hasnt sent the marker yet
                 map <uint32_t, bool>::iterator it = marker_received.find(p.sender);
                 if(it == marker_received.end())
                     ss_q.push(p);
-                    tmp_q.pop();
-                snapshot.held_back_mesgs = ss_q;
+                
             }
+            snapshot.held_back_mesgs = ss_q;
+            tmp_q.pop();
         }
 
 
