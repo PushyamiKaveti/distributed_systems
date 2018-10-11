@@ -454,7 +454,7 @@ void print_snapshot(){
     }
 
     while(!snapshot.in_channel_mesgs.empty()){
-        Mesg_pq p = snapshot.in_channel_mesgs.top();
+        Mesg_pq p = snapshot.in_channel_mesgs.front();
         cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
         snapshot.in_channel_mesgs.pop();
     }
