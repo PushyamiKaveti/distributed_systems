@@ -676,9 +676,9 @@ int main(int argc, char *argv[])
     //    num_mesg_snapshot = atoi(argv[4]) ;
     //    cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
     //}
-
+    bool args_provided = false;
     while ((cmd_arg = getopt (argc, argv, "p:h:c:s:")) != -1){
-        cout<<cmd_arg<<"1\n";
+        args_provided=true;
         switch (cmd_arg)
         {
             cout<<cmd_arg<<"\n";
@@ -716,7 +716,10 @@ int main(int argc, char *argv[])
                 return 1;
         }
     }
-
+    if(!args_provided || argc <=1){
+        cout<<"command options not provided\n";
+        return 1;
+    }
 
 
     // All the command line arguments
