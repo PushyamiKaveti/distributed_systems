@@ -699,6 +699,7 @@ int main(int argc, char *argv[])
 
             case 's':{
                 num_mesg_snapshot = atoi(optarg);
+                break;
             }
             case '?':
                 if (optopt == 'c' || optopt == 'p'||optopt == 'h'||optopt == 's' )
