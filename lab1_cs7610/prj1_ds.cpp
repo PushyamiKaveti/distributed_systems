@@ -479,8 +479,10 @@ void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, Co
         priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q = final_mesg_q;
         priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> ss_q;
         while (!tmp_q.empty()) {
+            cout<<"while outer\n";
             Mesg_pq p = tmp_q.top();
             while (!snapshot.held_back_mesgs.empty()){
+                cout<<"while inner\n";
                 Mesg_pq q = snapshot.held_back_mesgs.top();
                 ss_q.push(q);
                 snapshot.held_back_mesgs.pop();
