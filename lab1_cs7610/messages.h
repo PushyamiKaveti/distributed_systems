@@ -3,11 +3,15 @@
 //
 
 #include <cstdint>
+#include <queue>
+#include <vector>
 
 #ifndef LAB1_CS7610_MESSAGES_H
 #define LAB1_CS7610_MESSAGES_H
 
 #endif //LAB1_CS7610_MESSAGES_H
+
+using namespace std;
 
 typedef struct {
     uint32_t type; // must be equal to 1
@@ -39,6 +43,12 @@ typedef struct {
     bool deliver;
 } Mesg_pq;
 
+typedef struct{
+    int m_id ;
+    uint32_t sender;
+}Marker;
+
+
 // this is an strucure which implements the
 // operator overlading
 struct CompareDataMessage {
@@ -61,3 +71,11 @@ struct CompareMessage {
 
     }
 };
+
+
+typedef struct{
+    priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> ordered_mesgs;
+    priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> held_back_mesgs;
+    uint32_t  last_seq;
+
+}GlobalState;

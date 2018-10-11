@@ -37,7 +37,8 @@ using namespace std;
 
 //map for process ids and socket descriptors
 map <uint32_t , int> pid_sock_map;
-map <uint32_t , int> pid_tcpsock_map;
+map <uint32_t , int> pid_tcpsock_write_map;
+map <uint32_t , int> pid_tcpsock_read_map;
 
 //map for storing data messages in case we would like to display the messahes - CAN BE REMOVED
 map <uint32_t , DataMessage*> mid_message_map;
@@ -45,6 +46,13 @@ map <uint32_t , DataMessage*> mid_message_map;
 map <uint32_t , bool > mid_delivery_status_map;
 //map of messages and ack to keep track of receibed acks
 multimap <uint32_t , AckMessage> ack_q;
+priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> delivery_queue;
+
+GlobalState snapshot;
+bool snapshot_recorded= false;
+bool run_snapshot = false;
+map<uint32_t , bool> marker_received;
+
 //resend map
 map <uint32_t , pair <bool, fd_set > > resend_map;
 int bounded_delay = 30;
@@ -140,6 +148,8 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
         }
     }
 }
+
+
 
 //a timer
 void periodic_timer_thread(bool& s, int& interval)
@@ -351,7 +361,7 @@ int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_o
                 fdmax = sock_fd;
             }
             // add the pid , socked fd pairs to the map
-            pid_tcpsock_map.insert(pair <uint32_t , int> (c , sock_fd));
+            pid_tcpsock_write_map.insert(pair <uint32_t , int> (c , sock_fd));
 
             break;
         }
@@ -365,16 +375,125 @@ int initialize_sockets(vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_o
     }
 }
 
-void snaphot_algo(){
 
+void send_markers(int fdmax , fd_set writefds , void* m){
+    int s=0;
+
+    for (int i=0 ; i <=fdmax ;i++)
+    {
+        if (FD_ISSET(i, &writefds))
+        {
+            cout << "sent Marker\n";
+            if (send(i, m, sizeof (Marker), 0) == -1) {
+                perror("send");
+            }
+        }
+    }
 }
 
-void marker_sending(){
+void copy_queues(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q) {
+    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> final_copy = final_mesg_q;
+    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q;
 
+    while (!final_mesg_q.empty()) {
+        Mesg_pq p = final_copy.top();
+        tmp_q.push(p);
+        final_copy.pop();
+    }
+    snapshot.held_back_mesgs = tmp_q;
+
+    priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q1;
+    final_copy = delivery_queue;
+    while (!delivery_queue.empty()) {
+        Mesg_pq p = final_copy.top();
+        tmp_q1.push(p);
+        final_copy.pop();
+    }
+    snapshot.ordered_mesgs = tmp_q1;
 }
 
-void marker_receiving(){
+void marker_sending(priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter, uint32_t  pid, int fdmax, fd_set& tcp_writefds){
 
+    //save the state of current pid.
+    // access the delivery queue and holdback queue and the local sequence number agreed sequence number
+    if(!snapshot_recorded){
+        copy_queues(final_mesg_q);
+        snapshot.last_seq = msg_counter;
+        snapshot_recorded = true;
+        //send the marker
+        Marker m {1, pid};
+        send_markers(fdmax, tcp_writefds, &m);
+        marker_received.insert(pair<uint32_t, bool>(pid, true));
+    }
+
+     run_snapshot=true;
+}
+
+void marker_receiving(Marker* mark, priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage>& final_mesg_q, int msg_counter,  uint32_t  pid, int fdmax, fd_set& tcp_writefds){
+
+
+    //Check if the state has been recorded already
+    if (!snapshot_recorded){
+        //record the snapshot state
+        copy_queues(final_mesg_q);
+        snapshot.last_seq = msg_counter;
+        snapshot_recorded = true;
+
+        // count the number of markers
+        //marker sending rule
+        //send the marker
+        Marker m {1, pid};
+        send_markers(fdmax, tcp_writefds, &m);
+        marker_received.insert(pair<uint32_t, bool>(pid, true));
+        run_snapshot = true;
+    }
+    else{
+        //take all the messages that are received from the pid from which the marker is received since the snapshot was recorded and save in the snap shot
+        //i.e update any incoming messages which is hold back queue
+        priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> tmp_q = final_mesg_q;
+        priority_queue<Mesg_pq, vector<Mesg_pq>, CompareMessage> ss_q;
+        while (!tmp_q.empty()) {
+            Mesg_pq p = tmp_q.top();
+            while (!snapshot.held_back_mesgs.empty()){
+                Mesg_pq q = snapshot.held_back_mesgs.top();
+                ss_q.push(q);
+                snapshot.held_back_mesgs.pop();
+                if (q.msg_id == p.msg_id and q.sender == p.sender) {
+                    tmp_q.pop();
+                    break;
+                }
+            }
+            if(snapshot.held_back_mesgs.empty()){
+                //check if the sender of that message hasnt sent the marker yet
+                map <uint32_t, bool>::iterator it = marker_received.find(p.sender);
+                if(it == marker_received.end())
+                    ss_q.push(p);
+                    tmp_q.pop();
+                snapshot.held_back_mesgs = ss_q;
+            }
+        }
+
+
+    }
+    marker_received.insert(pair<uint32_t, bool>(mark->sender, true));
+    if (marker_received.size() == pid_sock_map.size()){
+        run_snapshot = false;
+        //print the global snapshot
+        cout<<"global snapshot:\n";
+        cout<<"Messages ordered :";
+        while(!snapshot.ordered_mesgs.empty()){
+            Mesg_pq p = snapshot.ordered_mesgs.top();
+            cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
+            snapshot.ordered_mesgs.pop();
+        }
+        cout<<"Messages to be ordered :";
+        while(!snapshot.held_back_mesgs.empty()){
+            Mesg_pq p = snapshot.held_back_mesgs.top();
+            cout<<"msg id :"<<p.msg_id<<"sender :"<<p.sender<<"\n";
+            snapshot.held_back_mesgs.pop();
+        }
+        cout<<"last sequence :"<<snapshot.last_seq<<"\n";
+    }
 }
 
 
@@ -476,7 +595,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
                 cout<<"msg_id :"<<p.msg_id<<"\n";
                 cout<<"sender :"<<p.sender<<"\n";
                 if(p.deliver){
-
+                    delivery_queue.push(p);
                     cout<<pid<<" : Processed message :"<<p.msg_id<<"from sender :"<<p.sender<<" with seq :("<<p.final_seq<<","<<p.final_seq_proposer<<")\n";
                     final_mesg_q.pop();
                 }
@@ -492,7 +611,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
 int main(int argc, char *argv[])
 {
     uint32_t loss_pid=0;
-    int num_mesg_snapshot=0
+    int num_mesg_snapshot=0;
     // All the command line arguments
     char* port = argv[1];
     if(argc == 4){
@@ -676,6 +795,11 @@ int main(int argc, char *argv[])
     // select loop to send and receive messages
     while(1)
     {
+        //check if the anpshot algo has to be instantiated
+        if ((counter-1) == num_mesg_snapshot && !snapshot_recorded){
+            //send the marker
+            marker_sending(final_mesg_q, counter,pid, fdmax, tcp_writefds);
+        }
         // if the timer goes off send the next message
         if (send_m){
             if (counter <= num_mesgs){
@@ -751,6 +875,25 @@ int main(int argc, char *argv[])
 
                     } else {
                          // receiving in any other sockets means it is the snapshot algorithm messages
+                        // handle data from a client
+                        if ((numbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
+                            // got error or connection closed by client
+                            if (numbytes == 0) {
+                                // connection closed
+                                printf("selectserver: socket %d hung up\n", i);
+                            } else {
+                                perror("recv");
+                            }
+
+                        } else {
+                            // we got data on tcp connection which means its a marker message
+                            if(run_snapshot){
+                                buf[numbytes] = '\0';
+                                Marker* b = (Marker *)buf;
+                                marker_receiving(b, final_mesg_q, counter, pid, fdmax, tcp_writefds);
+                            }
+
+                        }
 
                     }
                 }
