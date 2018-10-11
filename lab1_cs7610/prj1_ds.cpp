@@ -154,7 +154,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
 
             }
             if (FD_ISSET(i, &loss_fds)) {
-                cout << "loss for " << b->msg_id<<"\n";
+                cout << "loss for " << b->msg_id<<" \n";
                 std::multimap<uint32_t, uint32_t >::iterator it  = loss_msgs.find(b->msg_id);
                 loss_msgs.erase(it);
             }
