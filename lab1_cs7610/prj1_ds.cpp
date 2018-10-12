@@ -706,8 +706,8 @@ int main(int argc, char *argv[])
     int cmd_arg;
 
     int num_mesgs = 1;
-    uint32_t loss_pid=0;
-    int num_mesg_snapshot=0;
+    
+    int num_mesg_snapshot=-1;
     char* port;
     char* hostfile;
     bool simulate_loss=false;
