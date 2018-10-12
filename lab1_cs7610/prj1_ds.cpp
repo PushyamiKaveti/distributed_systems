@@ -260,7 +260,7 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             DataMessage m {1,pid,msg_id,1};
 
             //multicast the message to the group with socket descriptors ( writefds)
-            multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1, 0);
+            multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1);
             cout<<pid<<" : resent message: "<<msg_id<<"\n";
             fd_set resend_fds;
             FD_ZERO(&resend_fds);
@@ -615,7 +615,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
                 }
                 cout << "received all ACKS\n";
                 SeqMessage seq_m{3, b->sender, b->msg_id, max_seq, max_seq_proposer};
-                multicast_mesg(fdmax, writefds, receive_fd, &seq_m, 3, 0);
+                multicast_mesg(fdmax, writefds, receive_fd, &seq_m, 3);
 
                 // and multicast the final  seq numbner
             }
@@ -970,7 +970,7 @@ int main(int argc, char *argv[])
                 resend_map.insert(pair <uint32_t, pair<bool,fd_set>>((uint32_t)counter, pair<bool, fd_set> (false,resend_fds)));
 
                 //multicast the message to the group with socket descriptors ( writefds)
-                multicast_mesg(fdmax , writefds, receive_fd, &m , 1 , loss_pid);
+                multicast_mesg(fdmax , writefds, receive_fd, &m , 1 );
                 //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
                 thread t(timeout_thread , counter);
                 t.detach();
