@@ -719,14 +719,7 @@ int main(int argc, char *argv[])
     bool simulate_loss=false;
     char* lossfile;
 
-    //if(argc == 4){
-    //    loss_pid = (uint32_t ) atoi(argv[3]) ;
-    //    cout<<loss_pid<<","<<argv[3]<<"\n";
-    //}
-    //if(argc == 5){
-    //    num_mesg_snapshot = atoi(argv[4]) ;
-    //    cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
-    //}
+
     bool args_provided = false;
     while ((cmd_arg = getopt (argc, argv, "p:h:c:s:l:")) != -1){
         args_provided=true;

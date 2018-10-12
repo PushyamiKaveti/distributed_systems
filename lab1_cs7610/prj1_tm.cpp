@@ -39,6 +39,7 @@ map <uint32_t , DataMessage*> mid_message_map;
 map <uint32_t , bool > mid_delivery_status_map;
 //map of messages and ack to keep track of receibed acks
 multimap <uint32_t , AckMessage> ack_q;
+multimap <uint32_t , uint32_t > loss_msgs;
 //resend map
 map <uint32_t , pair <bool, fd_set > > resend_map;
 int bounded_delay = 30;
@@ -94,15 +95,30 @@ void send_mesg(int sock_fd , void* m , uint32_t ty){
     }
 }
 
-void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint32_t ty, uint32_t loss_pid){
+void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint32_t ty){
+
     int s=0;
     //send messages in a loop to all the hosts
-    int loss_fd = -1;
-    map<uint32_t , int>::iterator it = pid_sock_map.find(loss_pid);
-    if (it != pid_sock_map.end()) {
-        loss_fd = it->second;
-        cout << "simulating messages loss for pid :" << loss_pid << "\n";
+    fd_set loss_fds;
+    FD_ZERO(&loss_fds);
+    DataMessage* b;
+
+    if (ty == 1){
+        pair<multimap<uint32_t, uint32_t >::iterator, multimap<uint32_t, uint32_t >::iterator> ret;
+        b = (DataMessage *)m;
+        ret = loss_msgs.equal_range(b->msg_id);
+        for (std::multimap<uint32_t, uint32_t >::iterator it = ret.first; it != ret.second; ++it) {
+            uint32_t  p_id = it->second;
+            map<uint32_t , int>::iterator itr = pid_sock_map.find(p_id);
+            if (itr != pid_sock_map.end()) {
+                FD_SET(itr->second, &loss_fds);
+                cout << "simulating messages loss for msg_id :" <<b->msg_id<<"pid :" << p_id << "\n";
+                cout<<"sock :"<<itr->second<<"\n";
+            }
+        }
     }
+
+
     for (int i=0 ; i <=fdmax ;i++)
     {
         if (FD_ISSET(i, &writefds) && i != receive_fd)
@@ -121,12 +137,14 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
                 }
 
             }
-            if (i == loss_fd) {
-                cout << "loss for " << loss_pid<<"\n";
-
+            cout<<"sock :"<<i<<"\n";
+            if (FD_ISSET(i, &loss_fds)) {
+                cout << "loss for " << b->msg_id<<" \n";
+                std::multimap<uint32_t, uint32_t >::iterator it  = loss_msgs.find(b->msg_id);
+                loss_msgs.erase(it);
             }
             else {
-                cout << "sent message : " << ty << "\n";
+                //cout << "sent message : " << ty << "\n";
                 if (send(i, m, s, 0) == -1) {
                     perror("send");
                 }
@@ -225,7 +243,7 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             DataMessage m {1,pid,msg_id,1};
 
             //multicast the message to the group with socket descriptors ( writefds)
-            multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1, 0);
+            multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1);
             cout<<pid<<" : resent message: "<<msg_id<<"\n";
             fd_set resend_fds;
             FD_ZERO(&resend_fds);
@@ -293,7 +311,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
                 }
                 cout << "received all ACKS\n";
                 SeqMessage seq_m{3, b->sender, b->msg_id, max_seq, max_seq_proposer};
-                multicast_mesg(fdmax, writefds, receive_fd, &seq_m, 3, 0);
+                multicast_mesg(fdmax, writefds, receive_fd, &seq_m, 3);
 
                 // and multicast the final  seq numbner
             }
@@ -350,8 +368,99 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
     }
 }
 
+void read_lossfile(char* lossfile){
+
+    cout<<lossfile<<"\n";
+    ifstream f (lossfile);
+    string line;
+    // vector <string> hostnames;
+    int i=0;
+
+    if (f.is_open())
+    {
+        cout<<"reading lossfile\n";
+        // cout<<"hostnames:\n"<<endl;
+        uint32_t msg_id, p_id;
+        while (getline(f , line))
+        {
+            stringstream ss(line);
+            string item;
+            ss>>item;
+            msg_id = (uint32_t)stoi(item);
+            ss>>item;
+            p_id =  (uint32_t)stoi(item);
+            loss_msgs.insert(pair<uint32_t, uint32_t>(msg_id, p_id));
+            cout<<"loss for m :"<<msg_id<<", p:"<<p_id<<"\n";
+            //cout<<line<<"\n";
+        }
+        f.close();
+    }
+}
+
+
 int main(int argc, char *argv[])
 {
+
+    // Parse command line arguments
+    // -p port -h hostfile -c number of messages
+    char *cvalue = NULL;
+    int cmd_arg;
+
+    int num_mesgs = 1;
+
+    char* port;
+    char* hostfile;
+    bool simulate_loss=false;
+    char* lossfile;
+
+
+    bool args_provided = false;
+    while ((cmd_arg = getopt (argc, argv, "p:h:c:l:")) != -1){
+        args_provided=true;
+        switch (cmd_arg)
+        {
+            cout<<cmd_arg<<"\n";
+            case 'p':
+            {
+                port = optarg;
+                break;
+            }
+
+            case 'h':
+            {
+                hostfile = optarg;
+                break;
+            }
+
+            case 'c':{
+                num_mesgs =  atoi(optarg);
+                break;
+            }
+
+            case 'l':{
+                simulate_loss = true;
+                lossfile = optarg;
+                break;
+            }
+            case '?':
+                if (optopt == 'c' || optopt == 'p'||optopt == 'h'||optopt == 's' )
+                    fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+                else if (isprint (optopt))
+                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+                else
+                    fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+                return 1;
+            default:
+                cout<<"bad argument";
+                return 1;
+        }
+    }
+    if(!args_provided || argc <=1){
+        cout<<"command options not provided\n";
+        return 1;
+    }
+
+
     struct timeval tv;
     fd_set readfds;
     fd_set writefds;
@@ -364,13 +473,13 @@ int main(int argc, char *argv[])
     int rv;
     tv.tv_sec = 0;
     tv.tv_usec = 50000;
-    char* port = argv[1];
+
     vector <string> hostnames;
     char buf[MAXBUFLEN];
     int numbytes;
     struct sockaddr_storage their_addr;
     socklen_t addr_len;
-    int num_mesgs = 1;
+
     char host[256];
     char remote_host[256];
     queue <uint32_t > mid_q;
@@ -383,13 +492,15 @@ int main(int argc, char *argv[])
         cout<<loss_pid<<","<<argv[3]<<"\n";
     }
 
-
+    //---------------------------//
+    // INITIALIZE THE UDP SOCKETS//
+    //---------------------------//
     FD_ZERO(&writefds);    // clear the write and temp sets
     FD_ZERO(&readfds);
     FD_ZERO(&original);
 
     //read the file and get all hostnames
-    get_hostnames(argv[2] , &hostnames);
+    get_hostnames(hostfile , &hostnames);
     // setup sockets for each of the hosts ion specified port number
     //for each hostname get addrssinfo
     struct addrinfo hints, *servinfo, *p;
@@ -412,7 +523,7 @@ int main(int argc, char *argv[])
         }
 
 
-        printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
+        //printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
 
         if (bind(receive_fd, p->ai_addr, p->ai_addrlen) == -1) {
             close(receive_fd);
@@ -485,7 +596,7 @@ int main(int argc, char *argv[])
 
             if (strcmp(host, i.c_str()) == 0){
                 pid = c;
-                cout<<"process id :"<<pid<<"\n";
+
             }
 
             break;
@@ -498,6 +609,9 @@ int main(int argc, char *argv[])
 
         freeaddrinfo(servinfo);
     }
+    cout<<"process id :"<<pid<<"\n";
+    if(simulate_loss)
+        read_lossfile(lossfile);
     //sleep for 5 seconds so that we can setup the other processes
     this_thread::sleep_for(chrono::seconds(5));
     //boolean for sending messages
