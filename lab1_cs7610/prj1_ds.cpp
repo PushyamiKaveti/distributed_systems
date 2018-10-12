@@ -33,6 +33,7 @@
 
 
 #define MAXBUFLEN 100
+# define NUM_RESENDS 3
 using namespace std;
 
 //map for process ids and socket descriptors
@@ -48,6 +49,7 @@ map <uint32_t , bool > mid_delivery_status_map;
 multimap <uint32_t , AckMessage> ack_q;
 priority_queue <Mesg_pq, vector<Mesg_pq>, CompareMessage> delivery_queue;
 multimap <uint32_t , uint32_t > loss_msgs;
+map<pair<uint32_t, int >, int> resend_count;
 
 
 GlobalState snapshot;
@@ -182,6 +184,13 @@ void periodic_timer_thread(bool& s, int& interval)
     }
 }
 
+void update_send_count(int msg_id){
+    map<uint32_t , int > ::iterator pid_itr;
+    for (pid_itr = pid_sock_map.begin() ; pid_itr != pid_sock_map.end(); ++pid_itr) {
+        pair<uint32_t, int> re_pair(msg_id, pid_itr->second);
+        resend_count.insert(pair<pair<uint32_t, int>, int>(re_pair, 1));
+    }
+}
 
 bool check_acks( uint32_t msg_id){
 
@@ -248,6 +257,29 @@ void timeout_thread(uint32_t mid)
 
 }
 
+bool check_resend_count(int msg_id, fd_set fds, int fdmax){
+    for (int i=0 ; i <=fdmax ;i++)
+    {
+        if (FD_ISSET(i, &fds))
+        {
+            pair<uint32_t , uint32_t > repair(msg_id, i);
+            map <pair <uint32_t , int>, int>::iterator it = resend_count.find(repair);
+
+            if (it != resend_count.end()) {
+                int count = it->second;
+                if(count < NUM_RESENDS){
+                    it->second = count +1;
+                    return true;
+                }
+                else
+                    return false;
+            }
+        }
+
+    }
+    return false;
+}
+
 void check_resend(uint32_t pid, int fdmax, int receive_fd){
     map<uint32_t , pair<bool,fd_set>>::iterator itr ;
     uint32_t msg_id;
@@ -260,9 +292,14 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             cout<<pid <<" : resending message :"<<msg_id;
             //create Data message
             DataMessage m {1,pid,msg_id,1};
-
+            // chekc and update resend
+            if(!check_resend_count(msg_id, receive_fd, fdmax)){
+                cout<<"Number of resends exceeded. MESSAGE LOST\n";
+            }
             //multicast the message to the group with socket descriptors ( writefds)
             multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1);
+
+
             cout<<pid<<" : resent message: "<<msg_id<<"\n";
             fd_set resend_fds;
             FD_ZERO(&resend_fds);
@@ -973,6 +1010,7 @@ int main(int argc, char *argv[])
 
                 //multicast the message to the group with socket descriptors ( writefds)
                 multicast_mesg(fdmax , writefds, receive_fd, &m , 1 );
+                update_send_count(counter);
                 //create a timeout thread abd detach to run independently. When the timeout happens and all acks are not received it updates the resend map
                 thread t(timeout_thread , counter);
                 t.detach();
