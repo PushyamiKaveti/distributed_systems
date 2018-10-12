@@ -130,6 +130,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
             if (itr != pid_sock_map.end()) {
                 FD_SET(it->second, &loss_fds);
                 cout << "simulating messages loss for msg_id :" <<b->msg_id<<"pid :" << p_id << "\n";
+                cout<<"sock :"<<it->second<<"\n";
             }
         }
     }
@@ -153,6 +154,7 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
                 }
 
             }
+            cout<<"sock :"<<i<<"\n";
             if (FD_ISSET(i, &loss_fds)) {
                 cout << "loss for " << b->msg_id<<" \n";
                 std::multimap<uint32_t, uint32_t >::iterator it  = loss_msgs.find(b->msg_id);
