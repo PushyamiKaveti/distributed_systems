@@ -275,7 +275,7 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             DataMessage m {1,pid,msg_id,1};
 
             //multicast the message to the group with socket descriptors ( writefds)
-            if(!check_resend_count(msg_id, receive_fd, fdmax)){
+            if(!check_resend_count(msg_id, itr->second.second, fdmax)){
                 cout<<"Number of resends exceeded. MESSAGE LOST\n";
             }
             multicast_mesg(fdmax , itr->second.second, receive_fd, &m , 1);

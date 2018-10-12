@@ -293,7 +293,7 @@ void check_resend(uint32_t pid, int fdmax, int receive_fd){
             //create Data message
             DataMessage m {1,pid,msg_id,1};
             // chekc and update resend
-            if(!check_resend_count(msg_id, receive_fd, fdmax)){
+            if(!check_resend_count(msg_id, itr->second.second, fdmax)){
                 cout<<"Number of resends exceeded. MESSAGE LOST\n";
             }
             //multicast the message to the group with socket descriptors ( writefds)
