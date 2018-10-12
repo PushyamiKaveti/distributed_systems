@@ -680,6 +680,7 @@ void read_lossfile(char* lossfile){
     int i=0;
     if (f.is_open())
     {
+        cout<<"reading lossfile\n";
         // cout<<"hostnames:\n"<<endl;
         uint32_t msg_id, p_id;
         while (getline(f , line))
