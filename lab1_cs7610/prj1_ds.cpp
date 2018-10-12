@@ -766,11 +766,14 @@ int main(int argc, char *argv[])
         }
     }
     if(!args_provided || argc <=1){
-        cout<<"command options not provided\n";
+        fprintf (stderr,"command options not provided\n");
         return 1;
     }
 
-
+    if(num_mesg_snapshot > num_mesgs){
+        fprintf (stderr,"The number of messages to initiate snapshot must be less than the total number of messages sent\n");
+        return 1;
+    }
     // All the command line arguments
 
     struct timeval tv;
