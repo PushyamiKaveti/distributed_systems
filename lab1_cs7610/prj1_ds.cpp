@@ -128,9 +128,9 @@ void multicast_mesg(int fdmax , fd_set writefds , int receive_fd , void* m, uint
             uint32_t  p_id = it->second;
             map<uint32_t , int>::iterator itr = pid_sock_map.find(p_id);
             if (itr != pid_sock_map.end()) {
-                FD_SET(it->second, &loss_fds);
+                FD_SET(itr->second, &loss_fds);
                 cout << "simulating messages loss for msg_id :" <<b->msg_id<<"pid :" << p_id << "\n";
-                cout<<"sock :"<<it->second<<"\n";
+                cout<<"sock :"<<itr->second<<"\n";
             }
         }
     }
