@@ -726,7 +726,7 @@ int main(int argc, char *argv[])
     //    cout<<num_mesg_snapshot<<","<<argv[4]<<"\n";
     //}
     bool args_provided = false;
-    while ((cmd_arg = getopt (argc, argv, "p:h:c:s:l")) != -1){
+    while ((cmd_arg = getopt (argc, argv, "p:h:c:s:l:")) != -1){
         args_provided=true;
         switch (cmd_arg)
         {
