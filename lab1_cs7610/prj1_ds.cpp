@@ -673,7 +673,7 @@ void handle_messages(uint32_t ty ,uint32_t pid, queue<uint32_t > mid_q, int fdma
 }
 
 void read_lossfile(char* lossfile){
-    cout<<"reading lossfile\n";
+   
     ifstream f (lossfile);
     string line;
     // vector <string> hostnames;
