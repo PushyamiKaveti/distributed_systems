@@ -678,7 +678,7 @@ void read_lossfile(char* lossfile){
     string line;
     // vector <string> hostnames;
     int i=0;
-    cout<<"reading lossfile\n";
+    
     if (f.is_open())
     {
         cout<<"reading lossfile\n";
