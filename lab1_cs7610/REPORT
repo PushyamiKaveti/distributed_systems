@@ -1,0 +1,22 @@
+REPORT FOR LAB1
+------------------
+
+1. Reliable total order multicast:
+In this part ISIS total order mulricast protocol is implemented. A set processes p1, p2 ..pn are run on n hosts as described in the hostnames file. Each process connects to every other process via a UDP sockets. Once the connection is established each process starts sending the messages every 5 seconds (this is a defined constant in the code). After sending the data message, it waits for the acknowledgment from the receiving processes. If, the acknowledgement is not received within the bounded delay (which is also a defined constant), the message is considered lost and resent to those processes from which the acknowledgment is not received. If the message is lost again, it is resent in the same fashion.
+
+Once, all the acknowledgments from all the processes are received the process decides on the final sequence number as the max of all acknowledgments and sends a final sequence number.
+
+On the receiver side, when a data message is received it is put on the hold back queue and acknowledgment is sent. On receiving the final sequence number the message is marked delivered. The queue is ordered based on the sequence number and the messages with lower sequence numbers whose delivery flag is set are delivered.
+
+I used a priority queue to order the messages based on sequence numbers.
+
+
+2. distributed snapshot:
+
+The distributed snapshot functionality is added to the above algorithm based on chandi-lamport global snapshot algorithm. The initiating process starts the algorithm by sending a marker. each process receives the marker, saves the snapshot and sends the marker to the outgoing channels. The algorithm comes to an end when all the processes have received markers on all the channels.
+
+For this I defined a structure called global snapshot which has four fields
+1. Ordered messages
+2. not yet ordered messages  which means they are in hold back queue
+3. The messages in the channel which means these messages are received after the process saves the snapshot and before the marker is received on the incoming channels.
+4. the latest sequence number the process has seen.

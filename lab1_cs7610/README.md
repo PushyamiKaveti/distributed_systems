@@ -37,6 +37,9 @@ This code contains two parts for Total Ordered Multicast and Distributed Snapsho
   ./prj1_ds -p 22222 -h ../../hostnames.txt -c 1-s 1 -l ../../file.txt
 
 * here -s is the number of messages after which the snap shot should be instantiated and the value musst be less than -c argument.
+* for port number any port except for 33333 can be used. In the code this port is used for listening to new TCP connections for snapshot algorithm.
+
+
 
 ---------------------------------------------------------
 LOSS FILE DETAILS
@@ -52,4 +55,5 @@ The losses for the messages can be simulated by creating a file with format as f
 .
 
 In the code I have set my bounded delay value as 30 seconds. So, if a message gets delayed beyond 30 seconds its considered lost and resent. 
+
 
