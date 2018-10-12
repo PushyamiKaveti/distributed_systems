@@ -13,11 +13,10 @@ else()
 endif()
 set(CMAKE_CXX_STANDARD 11)
 
-
 add_executable(prj1_tm prj1_tm.cpp)
 add_executable(prj1_ds prj1_ds.cpp)
-add_executable(talker talker.cpp)
-add_executable(listener listener.cpp)
-add_executable(timer1 asio_test.cpp)
-add_executable(mesg messages.cpp)
+#add_executable(talker talker.cpp)
+#add_executable(listener listener.cpp)
+#add_executable(timer1 asio_test.cpp)
+#add_executable(mesg messages.cpp)
 
