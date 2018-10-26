@@ -39,6 +39,8 @@ map <uint32_t , int> pid_sock_membermap; // only require by leader to check for 
 // Alternatively we can each time go through the memeship list and get the socket ids from the map, send while doing multicast instead of using writefds
 map< uint32_t , pair<uint32_t, int >> request_map; // mapping between request id and (pid, socket)
 
+REQ_MESG pending_request; // This only for peers and not for leader
+
 uint32_t view_id = 0;
 vector<uint32_t> membership_list;
 multimap <uint32_t , OK_MESG> OK_q;
@@ -47,7 +49,7 @@ int num_hosts = 0;
 
 //function to send a message
 
-void send_ReqMesgs(void* m){
+/*void send_ReqMesgs(void* m){
     int sock_fd=0;
     for (int i = 0; i < membership_list.size(); i++)
     {
@@ -62,7 +64,7 @@ void send_ReqMesgs(void* m){
 
 
     }
-}
+}*/
 
 void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
     int s = 0;
@@ -75,6 +77,12 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
                 case 1 :
                 {
                     s = sizeof (REQ_MESG);
+                    break;
+                }
+                case 2:
+                {
+                    //sent only in case of peers
+                    s = sizeof(OK_MESG);
                     break;
                 }
                 case 3 :
@@ -330,7 +338,7 @@ bool check_oks( uint32_t request_id){
 
 }
 
-void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, int pid) {
+void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, uint32_t pid) {
 
     printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
@@ -338,10 +346,15 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, in
 
             //handle datamessages
             REQ_MESG *b = (REQ_MESG *) buf;
+
             // save the data into a local message buffer ( buffer because there might be cases where the Req has not yet processed, but we received another Request to add)
             // But for this project it is just peers adding one by one . so May be just a variable might suffice
+            pending_request = *b;
 
             // send an OK message
+            OK_MESG m{2, b->request_id, b->cur_view_id, pid};
+            // we can use multi cast because a peer has only leader in the writefds
+            multicast_mesgs( &m, tcp_writefds, fdmax, 2);
             break;
         }
         case 2: {
@@ -370,11 +383,29 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, in
                 }
                 FD_SET(new_sock, &tcp_writefds);
                 membership_list.push_back(new_pid);
+                pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
+                request_map.erase(it);
+
                 NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
                 char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
                 memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
                 multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
             }
+            break;
+        }
+        case 3:{
+
+            NEWVIEW_MESG *b = (NEWVIEW_MESG*) buf;
+            view_id = b->newview_id;
+            
+            membership_list.assign( b->member_list , b->member_list+ b->no_members);
+            //print the new view
+            cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
+            cout << "No of MEMBERS: "<<b->no_members << "\nlist: ";
+            for (uint32_t *i = b->member_list; *i ; ++i){
+                cout<< *i <<" , ";
+            }
+            cout<<"\n";
             break;
         }
 
@@ -561,6 +592,7 @@ int main(int argc, char *argv[])
                                     view_id++;
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(new_pid);
+                                    pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
                                     char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
                                     memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));

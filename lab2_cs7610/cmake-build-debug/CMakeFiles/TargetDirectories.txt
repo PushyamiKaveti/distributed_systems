@@ -1,0 +1,4 @@
+/home/pushyamik/Desktop/cs7610/distributed_systems/lab2_cs7610/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/pushyamik/Desktop/cs7610/distributed_systems/lab2_cs7610/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/pushyamik/Desktop/cs7610/distributed_systems/lab2_cs7610/cmake-build-debug/CMakeFiles/size_test.dir
+/home/pushyamik/Desktop/cs7610/distributed_systems/lab2_cs7610/cmake-build-debug/CMakeFiles/prj2_mp.dir

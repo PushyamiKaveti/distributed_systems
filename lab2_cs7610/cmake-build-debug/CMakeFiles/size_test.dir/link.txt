@@ -1,0 +1,1 @@
+/usr/bin/c++   -std=c++11 -pthread -g  -rdynamic CMakeFiles/size_test.dir/structsize_test.cpp.o  -o size_test 
