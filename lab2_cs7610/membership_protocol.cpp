@@ -397,7 +397,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
 
             NEWVIEW_MESG *b = (NEWVIEW_MESG*) buf;
             view_id = b->newview_id;
-            
+
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
             //print the new view
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
@@ -568,6 +568,7 @@ int main(int argc, char *argv[])
                                 // Initiate the 2PC to add the new member
                                 //get the name of the new peer
                                 getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+                                puts(remote_host);
                                 // look up the hostnames to get the pid of the peer
                                 int new_pid = get_pidofhost( hostnames, remote_host);
                                 if (new_pid < 0){
