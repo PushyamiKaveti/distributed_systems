@@ -1,0 +1,4 @@
+/home/pushyamik/clion-2018.2.4/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/pushyamik/Desktop/cs7610/distributed_systems/lab2_cs7610
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/pushyamik/Desktop/cs7610/distributed_systems/lab2_cs7610/cmake-build-debug
