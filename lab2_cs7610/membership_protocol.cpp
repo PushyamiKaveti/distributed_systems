@@ -194,7 +194,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
 
     // loop through all the results and bind to the first we can
     for(p = servinfo; p != NULL; p = p->ai_next) {
-        cout<<"protocol: "<<p->ai_protocol<<"\n";
+
         if ((tcp_receive_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("listener: socket");
             continue;
@@ -234,6 +234,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
     this_thread::sleep_for(chrono::seconds(5));
     int c=0;
     string leader = hostnames.at(0);
+
     cout<<"hosts:\n";
     cout<<"-----------------\n";
     for (auto &i : hostnames)
@@ -251,7 +252,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
                 memset(&hints, 0, sizeof hints);
                 hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
                 hints.ai_socktype = SOCK_STREAM;
-
+                cout<<"connecting to leader at :"<< leader<<"\n";
                 if ((rv = getaddrinfo( leader.c_str(), port, &hints, &servinfo)) != 0) {
                     fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
                     return 1;
@@ -556,7 +557,8 @@ int main(int argc, char *argv[])
                                 fdmax = sock_fd;
                             }
                             printf(" new connection from %s on socket %d\n",
-                                   inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), s, INET6_ADDRSTRLEN), sock_fd);
+                                   inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), s,
+                                             INET6_ADDRSTRLEN), sock_fd);
 
                             // if this process is the leader it additionally should call connect() because
                             // this remote process connection leader has accepted just came up and is listening now on port.
