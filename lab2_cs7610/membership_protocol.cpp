@@ -30,6 +30,7 @@
 
 #define MAXBUFLEN 100
 #define LEADER 1
+#define TIMEOUT 1
 
 using namespace std;
 
@@ -46,6 +47,7 @@ vector<uint32_t> membership_list;
 multimap <uint32_t , OK_MESG> OK_q;
 
 int num_hosts = 0;
+bool connection_established = false;
 
 //function to send a message
 
@@ -65,6 +67,17 @@ int num_hosts = 0;
 
     }
 }*/
+
+//a timer thread to send heartbeats
+void periodic_timer_thread(bool& s)
+{
+
+    while(1) {
+        this_thread::sleep_for(chrono::seconds(TIMEOUT));
+        s = true;
+    }
+}
+
 
 void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
     int s = 0;
@@ -89,6 +102,11 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
                 {
                     NEWVIEW_MESG* b = (NEWVIEW_MESG *)m;
                     s = sizeof (NEWVIEW_MESG) + (b->no_members * sizeof(uint32_t));
+                    break;
+                }
+                case 4 :
+                {
+                    s = sizeof(HEARTBEAT);
                     break;
                 }
 
@@ -169,6 +187,121 @@ int get_pidofhost( vector<string>& hostnames, char* remote_host){
     }
 }
 
+
+int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_readfds, fd_set& original, fd_set& udp_writefds,int& udp_receive_fd , int& fdmax){
+    //---------------------------//
+    // INITIALIZE THE UDP SOCKETS//
+    //---------------------------//
+    char host[256];
+    struct addrinfo hints, *servinfo, *p;
+    int rv, sock_fd;
+
+    gethostname(host , sizeof (host));
+    cout<<"My HOST:";
+    cout<<host<<"\n";
+
+    // setup sockets for each of the hosts in specified port number
+    //for each hostname get addrssinfo
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE; // use my IP
+
+    if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        return 1;
+    }
+
+    // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+
+        if ((udp_receive_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            perror("listener: socket");
+            continue;
+        }
+
+        //printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
+
+        if (bind(udp_receive_fd, p->ai_addr, p->ai_addrlen) == -1) {
+            close(udp_receive_fd);
+            perror("listener: bind");
+            continue;
+        }
+        break;
+    }
+
+    if (p == NULL) {
+        fprintf(stderr, "listener: failed to bind socket\n");
+        return 2;
+    }
+
+    freeaddrinfo(servinfo);
+
+    //add the socket to the list of read fds, add to write fds as well
+    FD_SET(udp_receive_fd , &udp_readfds);
+    FD_SET(udp_receive_fd , &original);
+    if (fdmax < udp_receive_fd)
+        fdmax = udp_receive_fd;
+
+    //loop through the hostnames
+
+    cout<<"All Hosts:\n";
+    cout<<"-----------------\n";
+    for (auto &i : hostnames)
+    {
+
+        //for each hostname get addrssinfo
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_flags = AI_PASSIVE; // use my IP
+
+        if ((rv = getaddrinfo( i.c_str(), port, &hints, &servinfo)) != 0) {
+            fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
+            return 1;
+        }
+
+        // loop through all the results and bind to the first we can
+        for(p = servinfo; p != NULL; p = p->ai_next) {
+
+            //inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s_tmp, INET6_ADDRSTRLEN);
+           // getnameinfo(p->ai_addr, p->ai_addrlen, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+            //puts(host);
+
+            if ((sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+                perror("remote: socket");
+                continue;
+            }
+            cout<<i<<":";
+
+            int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
+            if (res <0)
+            {
+                perror("remote: unable to connect()");
+                continue;
+            }
+            //add the socket desc to the list of writefds, add to readfds as well
+            //store all the socket descriptors in fd sets
+            FD_SET(sock_fd , &udp_writefds);
+            if (fdmax < sock_fd){
+                fdmax = sock_fd;
+            }
+
+
+            break;
+        }
+
+        if (p == NULL) {
+            fprintf(stderr, "remote: failed to create socket\n");
+            return 2;
+        }
+
+        freeaddrinfo(servinfo);
+    }
+
+}
+
 int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_original, fd_set& tcp_write_fds, int& tcp_receive_fd, int& fdmax, uint32_t& pid){
 
     //establish tcp connections beyween processes for snapshot algorithm
@@ -219,7 +352,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
     freeaddrinfo(servinfo);
 
     // listen
-    if (listen(tcp_receive_fd, 15) == -1) {
+    if (listen(tcp_receive_fd, 10) == -1) {
         perror("listen");
         exit(3);
     }
@@ -391,6 +524,8 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                 char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
                 memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
                 multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
+                //TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
+                // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
             }
             break;
         }
@@ -407,6 +542,9 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                 cout<< *i <<" , ";
             }
             cout<<"\n";
+
+            //TODO: When a peer updates its view add the new members to the heartbeat timeout map and remove the
+            // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
             break;
         }
 
@@ -480,10 +618,13 @@ int main(int argc, char *argv[])
     fd_set tcp_readfds;
     fd_set tcp_writefds;
 
+    fd_set udp_readfds;
+    fd_set udp_writefds;
+
 
     int fdmax;
     uint32_t pid;
-    int receive_fd, sock_fd, tcp_receive_fd;
+    int udp_receive_fd, sock_fd, tcp_receive_fd;
     char s[INET6_ADDRSTRLEN];
     char s_tmp[INET6_ADDRSTRLEN];
     int rv;
@@ -516,6 +657,14 @@ int main(int argc, char *argv[])
 
     //Initialize tcp sockets and also updates the process id (pid)
     initialize_sockets(port, hostnames , tcp_readfds, original, tcp_writefds, tcp_receive_fd , fdmax, pid);
+
+    FD_ZERO(&udp_writefds);    // clear the write and temp sets
+    FD_ZERO(&udp_readfds);
+
+
+    // Initialize UDP sockets
+    initialize_udp_sockets(port, hostnames , udp_readfds, original, udp_writefds, udp_receive_fd , fdmax);
+
     if (pid == 1){
         // This is the leader. Initialize the membership
         membership_list.push_back(pid);
@@ -525,9 +674,23 @@ int main(int argc, char *argv[])
     uint32_t request_id = 0;
     int new_sock = -1;
 
+    bool send_HB = true;
+    //timer for sending messages at regular time intervals. MIGHT HAV ETO START AFTER CONNECTION ESTABLISHED> ANY PROBLEM WITH THIS??
+    thread timer_(periodic_timer_thread , std::ref(send_HB));
+
+
     // select loop to send and receive messages
     while(1)
     {
+        if (send_HB && connection_established){
+            //send the heartbeat message
+            HEARTBEAT h{4, pid};
+            multicast_mesgs(&h, udp_writefds, fdmax, 4);
+            send_HB = false;
+        }
+
+        //TODO: check for timer gone off
+        //TODO: If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits
 
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
@@ -559,7 +722,7 @@ int main(int argc, char *argv[])
                             printf(" new connection from %s on socket %d\n",
                                    inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *) &their_addr), s,
                                              INET6_ADDRSTRLEN), sock_fd);
-
+                             connection_established = true;
                             // if this process is the leader it additionally should call connect() because
                             // this remote process connection leader has accepted just came up and is listening now on port.
                             // after calling connect the leader can use that sock fd to send messages to this new peer
@@ -599,6 +762,8 @@ int main(int argc, char *argv[])
                                     char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
                                     memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
                                     multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
+                                    // TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
+                                    // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
 
                                 }
 
@@ -608,7 +773,30 @@ int main(int argc, char *argv[])
 
                         }
 
-                    } else {
+                    }
+                    else if (i == udp_receive_fd){
+                        // received message
+                        addr_len = sizeof their_addr;
+                        if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
+                            perror("recvfrom");
+                            exit(1);
+                        }
+
+                        //printf("got packet from %s", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
+
+                        buf[numbytes] = '\0';
+                        //check the first few bytes and check the type of the message
+                        uint32_t b1;
+                        memcpy(&b1, &buf, sizeof(uint32_t));
+                        //This must be heartbeat message
+                         //TODO:
+                        //handle the message
+                        // TODO: check if the member is not timed out form the map pid->timeout bool
+                        // TODO: if not timed out reset the timer if its there
+                        //TODO: else print unexpected behavior already time dout but received heart beat
+
+                    }
+                    else {
                         // receiving in any other sockets means it is getting messages from peers (here it is just the leader for membership protocol) connected to this
                         // handle data from a remote host
                         if ((numbytes = recv(i, buf, sizeof buf, 0)) <= 0) {

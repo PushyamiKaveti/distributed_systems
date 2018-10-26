@@ -40,7 +40,10 @@ typedef struct {
     uint32_t* member_list; //list of pids of the members of the new view
 } NEWVIEW_MESG;
 
-
+typedef struct {
+    uint32_t type; // must be equal to 4
+    uint32_t pid; //PID of the process sending heart beat
+} HEARTBEAT;
 
 
 
