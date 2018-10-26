@@ -34,10 +34,15 @@
 using namespace std;
 
 //map for process ids and socket descriptors of members
-map <uint32_t , int> pid_sock_map;
-map <uint32_t , int> pid_sock_read_map;
+map <uint32_t , int> pid_sock_membermap; // only require by leader to check for the members ids and theior corrsponidng sockets.
+// Will be needed when removing a peer because we have to delete the socket from the list as well.
+// Alternatively we can each time go through the memeship list and get the socket ids from the map, send while doing multicast instead of using writefds
+map< uint32_t , pair<uint32_t, int >> request_map; // mapping between request id and (pid, socket)
+
 uint32_t view_id = 0;
 vector<uint32_t> membership_list;
+multimap <uint32_t , OK_MESG> OK_q;
+
 int num_hosts = 0;
 
 //function to send a message
@@ -83,7 +88,7 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
 
             //cout << "sent message : " << ty << "\n";
             if (send(i, m, s, 0) == -1) {
-                    perror("send");
+                    perror("sent message");
             }
         }
     }
@@ -313,8 +318,67 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     return sock_fd;
 }
 
-void handle_messages(uint32_t ty, char* buf){
+bool check_oks( uint32_t request_id){
 
+    int num_acks = OK_q.count(request_id);
+    //cout<<"checking if all acks are received\n";
+    //check from all memebers except from the leader so -1
+    if (num_acks == (membership_list.size() -1)){
+        return true;
+    }
+    return false;
+
+}
+
+void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, int pid) {
+
+    printf(" Received message with type : \"%d  \"\n", ty);
+    switch (ty) {
+        case 1: {
+
+            //handle datamessages
+            REQ_MESG *b = (REQ_MESG *) buf;
+            // save the data into a local message buffer ( buffer because there might be cases where the Req has not yet processed, but we received another Request to add)
+            // But for this project it is just peers adding one by one . so May be just a variable might suffice
+
+            // send an OK message
+            break;
+        }
+        case 2: {
+             // ADD check cndition if this is the lader process or not
+             if (pid != 1){
+                 cout<<"OK message received inside a peer. SOMETHING IS WRONG \n";
+                 return;
+             }
+            //handle OK messages
+            OK_MESG *b = (OK_MESG *) buf;
+            //cout<<"received ACK for msg:"<<b->msg_id<<"\n";
+            OK_q.insert(pair<uint32_t, OK_MESG>(b->request_id, *b));
+            if (check_oks(b->request_id)) {
+              //change the view and communicate it to all the peers
+                view_id++;
+                map < uint32_t , pair <uint32_t , int>>::iterator it = request_map.find(b->request_id);
+                int new_sock = -1;
+                uint32_t new_pid = 0;
+                if (it != request_map.end()) {
+                    new_pid = it->second.first;
+                    new_sock = it->second.second;
+                }
+                else{
+                    cout<<"No request pending to add the peer. SOMETHING WRONG\n";
+                    return;
+                }
+                FD_SET(new_sock, &tcp_writefds);
+                membership_list.push_back(new_pid);
+                NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
+                char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
+                memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
+                multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
+            }
+            break;
+        }
+
+    }
 }
 
 
@@ -427,7 +491,7 @@ int main(int argc, char *argv[])
     //sleep for 5 seconds so that we can setup the other processes
     this_thread::sleep_for(chrono::seconds(5));
     uint32_t request_id = 0;
-    int new_sock = 0;
+    int new_sock = -1;
 
     // select loop to send and receive messages
     while(1)
@@ -471,29 +535,32 @@ int main(int argc, char *argv[])
                                 // connect to the neew member to sent messages and get the socket.
                                 new_sock = connect_to_new_member(their_addr, port, addr_len, fdmax );
                                 // Initiate the 2PC to add the new member
+                                //get the name of the new peer
+                                getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+                                // look up the hostnames to get the pid of the peer
+                                int new_pid = get_pidofhost( hostnames, remote_host);
+                                if (new_pid < 0){
+                                    cout<<"Unknown peer trying to connect\n";
+                                    continue;
+                                }
 
                                 // check if there are other memebers in the membershio list
                                 // if so compose a request message
                                 if (check_membership() != 0){
                                     // if there are other members in the group send the Req to all those members
-                                    REQ_MESG m {1, request_id, view_id, ADD, pid};
+                                    REQ_MESG m {1, request_id, view_id, ADD, (uint32_t )new_pid};
                                     // This can be changed as  a multicast to all write fds. Initially it will be empty
                                     //send_ReqMesgs(&m, &tcp_writefds);
+                                    //insert the request -> (pid, socket) mapping inside leader map.
+                                    pair<uint32_t, int> req_pair(new_pid, new_sock);
+                                    request_map.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
                                     multicast_mesgs(&m , tcp_writefds, fdmax, 1);
                                 }
                                 else{
                                     // if there are no memebers in the group then difectly send NEWVIEW Message to the new member
                                     view_id++;
-                                    //get the name of the new peer
-                                    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
-                                    // look up the hostnames to get the pid of the peer
-                                    int res = get_pidofhost( hostnames, remote_host);
-                                    if (res < 0){
-                                        cout<<"Unknown peer trying to connect\n";
-                                        continue;
-                                    }
                                     FD_SET(new_sock, &tcp_writefds);
-                                    membership_list.push_back(res);
+                                    membership_list.push_back(new_pid);
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
                                     char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
                                     memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
@@ -523,10 +590,10 @@ int main(int argc, char *argv[])
                             // we got data on tcp connection different types of handling messages depending on leader or not
                             buf[numbytes] = '\0';
                             //check the first few bytes and check the type of the message
-                            uint32_t b1;
-                            memcpy(&b1, &buf, sizeof(uint32_t));
+                            uint32_t typ;
+                            memcpy(&typ, &buf, sizeof(uint32_t));
                             //handle the message
-                            //handle_messages(buf, b1);
+                            handle_messages(buf, typ, tcp_writefds , fdmax, pid);
 
                         }
 
