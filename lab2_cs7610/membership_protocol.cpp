@@ -791,7 +791,7 @@ int main(int argc, char *argv[])
                         //This must be heartbeat message
                          //TODO:
                         //handle the message
-                        // TODO: check if the member is not timed out form the map pid->timeout bool
+                        // TODO: check if the member is not timed out from the map pid->timeout bool
                         // TODO: if not timed out reset the timer if its there
                         //TODO: else print unexpected behavior already time dout but received heart beat
 
