@@ -455,6 +455,7 @@ int main(int argc, char *argv[])
                     if (i == tcp_receive_fd) {
                         // handle new connections
                         //accept the connection
+                        addr_len = sizeof their_addr;
                         sock_fd = accept(tcp_receive_fd, (struct sockaddr *) &their_addr, &addr_len);
 
                         if (sock_fd == -1) {
