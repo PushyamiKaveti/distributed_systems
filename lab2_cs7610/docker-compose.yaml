@@ -1,0 +1,48 @@
+version: '2'
+
+services:
+  machine1:
+    image: pkcentos
+    hostname: vdi-linux-030.ccs.neu.edu
+    expose:
+      - "10000"
+    networks:
+      lab1:
+        aliases:
+          - vdi-linux-030.ccs.neu.edu
+    volumes:
+      - ".:/code"
+    working_dir: "/code"
+    stdin_open: true
+
+  machine2:
+    image: pkcentos
+    hostname: vdi-linux-031.ccs.neu.edu
+    expose:
+    - "10000"
+    networks:
+      lab1:
+        aliases:
+        - vdi-linux-031.ccs.neu.edu
+    volumes:
+    - ".:/code"
+    working_dir: "/code"
+    stdin_open: true
+  
+  machine3:
+    image: pkcentos
+    hostname: vdi-linux-032.ccs.neu.edu
+    expose:
+    - "10000"
+    networks:
+      lab1:
+        aliases:
+        - vdi-linux-032.ccs.neu.edu
+    volumes:
+    - ".:/code"
+    working_dir: "/code"
+    stdin_open: true
+    
+networks:
+  lab1:
+    driver: bridge
