@@ -116,8 +116,13 @@ void *get_in_addr(struct sockaddr *sa)
     if (sa->sa_family == AF_INET) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
-    cout<<sa->sa_family<<"\n";
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+    else if (sa->sa_family == AF_INET6){
+        cout<<sa->sa_family<<"\n";
+        return &(((struct sockaddr_in6*)sa)->sin6_addr);
+    }
+    else
+        cout<<"ERROR in accept. BAD ADDRESS\n";
+
 }
 
 void get_hostnames(char* hostfile, vector <string>* hostnames)
