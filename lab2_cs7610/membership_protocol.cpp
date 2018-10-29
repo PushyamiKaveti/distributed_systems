@@ -292,7 +292,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
 
 int connect_to_new_member(struct sockaddr_storage their_addr, char* port, socklen_t addr_len, int& fdmax){
 
-    int sock_fd;
+    int sock_fd, rv;
     struct sockaddr* sa = (struct sockaddr *) &their_addr;
     addr_len = sizeof their_addr;
     char remote_host[256];
@@ -324,14 +324,22 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
         //printf("remote : %s\n",s_tmp);
 
         int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
-        if (res <0)
-        {
+        if (res < 0) {
             perror("remote: unable to connect()");
             continue;
         }
 
+        if (fdmax < sock_fd) {
+            fdmax = sock_fd;
+        }
+        break;
+    }
+    if (p == NULL) {
+        fprintf(stderr, "remote: failed to create socket\n");
+        return 2;
+    }
 
-
+    freeaddrinfo(servinfo);
    /* if ((sock_fd = socket(sa->sa_family, SOCK_STREAM, 0)) == -1) {
             perror("remote: socket");
             return -1;
@@ -362,9 +370,7 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     //add the socket desc to the list of writefds,
     //FD_SET(sock_fd , &tcp_write_fds);
 
-    if (fdmax < sock_fd){
-        fdmax = sock_fd;
-    }
+
 
     return sock_fd;
 }
