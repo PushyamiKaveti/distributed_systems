@@ -611,7 +611,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                 pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                 request_map.erase(it);
 
-                NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list.data()};
+                NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list[0]};
                 char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
                 memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
                 multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
@@ -866,7 +866,7 @@ int main(int argc, char *argv[])
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
-                                    NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list.data()};
+                                    NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list[0]};
                                     NEWVIEW_MESG m1;
                                     cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
 
