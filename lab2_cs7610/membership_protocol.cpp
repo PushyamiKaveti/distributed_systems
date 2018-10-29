@@ -112,7 +112,7 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
 
             }
 
-            //cout << "sent message : " << ty << "\n";
+            cout << "sent message of type : " << ty << "\n";
             if (send(i, m, s, 0) == -1) {
                     perror("sent message");
             }
@@ -816,9 +816,10 @@ int main(int argc, char *argv[])
                                 // Initiate the 2PC to add the new member
                                 //get the name of the new peer
                                 getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
-                                puts(remote_host);
+                                cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                 // look up the hostnames to get the pid of the peer
                                 int new_pid = get_pidofhost( hostnames, remote_host);
+                                cout<<"\nhost PID is :"<<res<<"\n";
                                 if (new_pid < 0){
                                     cout<<"Unknown peer trying to connect\n";
                                     continue;
@@ -840,15 +841,15 @@ int main(int argc, char *argv[])
                                     // if there are no memebers in the group then difectly send NEWVIEW Message to the new member
                                     view_id++;
                                     //get the name of the new peer
-                                    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
-                                    cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
+                                    //getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+
                                     // look up the hostnames to get the pid of the peer
-                                    int res = get_pidofhost( hostnames, remote_host);
-                                    cout<<"host PID is :"<<res<<"\n";
-                                    if (res < 0){
-                                        cout<<"Unknown peer trying to connect\n";
-                                        continue;
-                                    }
+                                    //int res = get_pidofhost( hostnames, remote_host);
+
+                                    //if (res < 0){
+                                    //    cout<<"Unknown peer trying to connect\n";
+                                    //    continue;
+                                    //}
 
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(new_pid);
