@@ -864,7 +864,10 @@ int main(int argc, char *argv[])
                                     cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
                                     cout<<"size of uint pointer"<< sizeof (uint32_t*)<<"\n";
                                     cout<<"size of new message"<< sizeof(NEWVIEW_MESG)<<"\n";
-                                    cout<<"size of new message"<< sizeof(REQ_MESG)<<"\n";
+                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.no_members)<<"\n";
+                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.newview_id)<<"\n";
+                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.type)<<"\n";
+                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.member_list)<<"\n";
                                     cout<<"size of uint"<< sizeof(uint32_t)<<"\n";
                                     cout<<"size of memberlist "<< m.no_members<<"\n";
                                     cout<<"size of message"<<(sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t))<<"\n";
