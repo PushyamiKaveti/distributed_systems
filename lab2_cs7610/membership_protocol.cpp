@@ -103,6 +103,8 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
                 {
                     NEWVIEW_MESG* b = (NEWVIEW_MESG *)m;
                     s = sizeof (NEWVIEW_MESG) + (b->no_members * sizeof(uint32_t));
+                    cout<<"new view message size :"<<s<<"\n";
+                    cout<<"new view message size based on buffer :"<< sizeof(*m)<<"\n";
                     break;
                 }
                 case 4 :
