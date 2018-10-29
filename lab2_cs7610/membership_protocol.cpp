@@ -620,7 +620,8 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             //print the new view
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
             cout<<"No of members in new view : "<<b->no_members<<"\n";
-
+            uint32_t* tmp;
+            memcpy(tmp, b->member_list, b->no_members * sizeof(uint32_t));
             cout<< sizeof(b->member_list)<<"\n";
             //for (uint32_t *i = b->member_list; *i ; ++i){
             //    cout<< *i <<" , ";
