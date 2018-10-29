@@ -922,6 +922,7 @@ int main(int argc, char *argv[])
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             uint32_t tmp;
                             memcpy(&tmp, &buf[(3* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             //handle the message
                             handle_messages(buf, typ, tcp_writefds , fdmax, pid);
