@@ -627,12 +627,11 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             //print the new view
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
             cout<<"No of members in new view : "<<b->no_members<<"\n";
-            uint32_t* tmp;
 
-            cout<< sizeof(b->member_list)<<"\n";
-            //for (uint32_t *i = b->member_list; *i ; ++i){
-            //    cout<< *i <<" , ";
-            //}
+            //cout<< sizeof(b->member_list)<<"\n";
+            for (uint32_t *i = b->member_list; *i ; ++i){
+                cout<< *i <<" , ";
+            }
             view_id = b->newview_id;
             cout<<"here"<<"\n";
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
@@ -864,13 +863,6 @@ int main(int argc, char *argv[])
                                      }
 
                                      cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
-
-                                    //int mesg_size = (sizeof(m.newview_id) + sizeof(m.no_members) + sizeof(m.type) + m.no_members * sizeof(uint32_t));
-                                   // cout<<"mesg size"<<mesg_size<<"\n";
-                                    //char* b1= (char *) calloc(mesg_size, sizeof(char));
-                                    //memcpy( b1, &m, mesg_size);
-                                    //char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
-                                   // memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
                                      multicast_mesgs(&m , tcp_writefds, fdmax, 3);
                                     // TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
                                     // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
@@ -922,8 +914,12 @@ int main(int argc, char *argv[])
                             cout<<"num of bytes received: "<<numbytes<<"\n";
                             // we got data on tcp connection different types of handling messages depending on leader or not
                             buf[numbytes] = '\0';
+
+                            //handle the message
+                            handle_messages(buf, typ, tcp_writefds , fdmax, pid);
+
                             //check the first few bytes and check the type of the message
-                            uint32_t typ;
+                            /*uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             uint32_t tmp;
                             memcpy(&tmp, &buf[(0* sizeof(uint32_t))], sizeof(uint32_t));
@@ -949,11 +945,9 @@ int main(int argc, char *argv[])
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(7* sizeof(uint32_t))], sizeof(uint32_t));
                             cout<<(7* sizeof(uint32_t))<<"\n";
-                            cout<<tmp<<"\n";
+                            cout<<tmp<<"\n";*/
 
 
-                            //handle the message
-                            handle_messages(buf, typ, tcp_writefds , fdmax, pid);
 
                         }
 
