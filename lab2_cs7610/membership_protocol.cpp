@@ -295,14 +295,44 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     int sock_fd;
     struct sockaddr* sa = (struct sockaddr *) &their_addr;
     addr_len = sizeof their_addr;
-
+    char remote_host[256];
 
     cout<<"safamily : "<<sa->sa_family<<"\n";
     cout<<"addr_len : "<< addr_len;
     cout<<"port : "<< atoi(port);
 
+    struct addrinfo hints, *servinfo, *p;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+    hints.ai_socktype = SOCK_STREAM;
+    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+    puts(remote_host);
+    if ((rv = getaddrinfo( remote_host, port, &hints, &servinfo)) != 0) {
+        fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
+        return 1;
+    }
 
-    if ((sock_fd = socket(sa->sa_family, SOCK_STREAM, 0)) == -1) {
+    // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+
+
+        if ((sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            perror("remote: socket");
+            continue;
+        }
+        //cout<<i<<":";
+        //printf("remote : %s\n",s_tmp);
+
+        int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
+        if (res <0)
+        {
+            perror("remote: unable to connect()");
+            continue;
+        }
+
+
+
+   /* if ((sock_fd = socket(sa->sa_family, SOCK_STREAM, 0)) == -1) {
             perror("remote: socket");
             return -1;
 
@@ -327,7 +357,8 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     {
         perror("remote: unable to connect()");
         return -1;
-    }
+    } */
+
     //add the socket desc to the list of writefds,
     //FD_SET(sock_fd , &tcp_write_fds);
 
