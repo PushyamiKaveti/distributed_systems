@@ -860,6 +860,9 @@ int main(int argc, char *argv[])
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
+                                    
+                                    cout<<"creating new view message\n"<<"no of memebers :"<<membership_list.size()<<"\n";
+                                    cout<<"size of message"<<(sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t))<<"\n";
 
                                     char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
                                     memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
