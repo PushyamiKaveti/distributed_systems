@@ -102,7 +102,8 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
                 case 3 :
                 {
                     NEWVIEW_MESG* b = (NEWVIEW_MESG *)m;
-                    s = sizeof (NEWVIEW_MESG) + (b->no_members * sizeof(uint32_t));
+                    //s = sizeof (NEWVIEW_MESG) + (b->no_members * sizeof(uint32_t));
+                    s = (sizeof(b->newview_id) + sizeof(b->no_members) + sizeof(b->type) + b->no_members * sizeof(uint32_t))
                     cout<<"new view message size :"<<s<<"\n";
                     break;
                 }
@@ -862,18 +863,18 @@ int main(int argc, char *argv[])
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
                                     NEWVIEW_MESG m1;
                                     cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
-                                    cout<<"size of uint pointer"<< sizeof (uint32_t*)<<"\n";
-                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG)<<"\n";
-                                    cout<<"size of new message"<< sizeof(m1.no_members)<<"\n";
+
+                                    cout<<"size of new message"<< sizeof(m)<<"\n";
                                     cout<<"size of new message"<< sizeof(m1.newview_id)<<"\n";
                                     cout<<"size of new message"<< sizeof(m1.type)<<"\n";
                                     cout<<"size of new message"<< sizeof(m1.member_list)<<"\n";
-                                    cout<<"size of uint"<< sizeof(uint32_t)<<"\n";
-                                    cout<<"size of memberlist "<< m.no_members<<"\n";
-                                    cout<<"size of message"<<(sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t))<<"\n";
 
-                                    char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
-                                    memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
+                                    int mesg_size = (sizeof(m.newview_id) + sizeof(m.no_members) + sizeof(m.type) + m.no_members * sizeof(uint32_t));
+
+                                    char* b1= (char *) calloc(mesg_size, sizeof(char));
+                                    memcpy( b1, &m, mesg_size);
+                                    //char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
+                                   // memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
                                     multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
                                     // TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
                                     // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
