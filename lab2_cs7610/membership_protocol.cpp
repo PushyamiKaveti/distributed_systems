@@ -633,7 +633,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
 
             for (int i =0; i<membership_list.size(); i++){
-                cout<<membership_list.at(0)<<"\n";
+                cout<<membership_list.at(i)<<"\n";
             }
             //TODO: When a peer updates its view add the new members to the heartbeat timeout map and remove the
             // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
