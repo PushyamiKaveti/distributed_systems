@@ -626,9 +626,8 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             //    cout<< *i <<" , ";
             //}
             //cout<<"\n";
-            cout << typeid(b->newview_id).name() << endl;
-            cout << typeid(view_id).name() << endl;
             view_id = (uint32_t) (b->newview_id);
+            cout<<"here"<<"\n";
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
 
             //TODO: When a peer updates its view add the new members to the heartbeat timeout map and remove the
