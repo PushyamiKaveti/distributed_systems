@@ -147,8 +147,13 @@ void *get_in_addr(struct sockaddr *sa)
     if (sa->sa_family == AF_INET) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
+    else if (sa->sa_family == AF_INET6){
+        cout<<sa->sa_family<<"\n";
+        return &(((struct sockaddr_in6*)sa)->sin6_addr);
+    }
+    else
+        cout<<"ERROR in accept. BAD ADDRESS\n";
 
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 void get_hostnames(char* hostfile, vector <string>* hostnames)
@@ -174,12 +179,32 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 
 int get_pidofhost( vector<string>& hostnames, char* remote_host){
     bool found = false;
-    for (int i = 0; i < hostnames.size(); i++)
-        if (strcmp(remote_host, hostnames[i].c_str()) == 0) {
-            std::cout << "host is present at index " << i;
+    struct addrinfo hints, *servinfo, *p;
+    char s[256];
+    int rv;
+    for (int i = 1; i < hostnames.size(); i++){
+        //for each hostname get addrssinfo
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+        hints.ai_socktype = SOCK_DGRAM;
+
+        if ((rv = getaddrinfo( hostnames[i].c_str(), "22222", &hints, &servinfo)) != 0) {
+            fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
+            return 1;
+        }
+
+        // loop through all the results and bind to the first we can
+
+
+        getnameinfo(servinfo->ai_addr, servinfo->ai_addrlen, s, sizeof (s), NULL, 0, NI_NUMERICHOST);
+        cout<<"host : "<<s<<"\n";
+        if (strcmp(remote_host, s) == 0) {
+            cout << "host is present at index " << i;
             found = true;
             return (i+1);
         }
+    }
+
 
     if (!found) {
         std::cout << "Unknown host trying to contact";
@@ -434,9 +459,55 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
 
 int connect_to_new_member(struct sockaddr_storage their_addr, char* port, socklen_t addr_len, int& fdmax){
 
-    int sock_fd;
+    int sock_fd, rv;
+    struct sockaddr* sa = (struct sockaddr *) &their_addr;
+    addr_len = sizeof their_addr;
+    char remote_host[256];
 
-    if ((sock_fd = socket(AF_UNSPEC, SOCK_STREAM, 0)) == -1) {
+    cout<<"safamily : "<<sa->sa_family<<"\n";
+    cout<<"addr_len : "<< addr_len;
+    cout<<"port : "<< atoi(port);
+
+    struct addrinfo hints, *servinfo, *p;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+    hints.ai_socktype = SOCK_STREAM;
+    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+    puts(remote_host);
+    if ((rv = getaddrinfo( remote_host, port, &hints, &servinfo)) != 0) {
+        fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
+        return 1;
+    }
+
+    // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+
+
+        if ((sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            perror("remote: socket");
+            continue;
+        }
+        //cout<<i<<":";
+        //printf("remote : %s\n",s_tmp);
+
+        int res = connect(sock_fd, p->ai_addr, p->ai_addrlen);
+        if (res < 0) {
+            perror("remote: unable to connect()");
+            continue;
+        }
+
+        if (fdmax < sock_fd) {
+            fdmax = sock_fd;
+        }
+        break;
+    }
+    if (p == NULL) {
+        fprintf(stderr, "remote: failed to create socket\n");
+        return 2;
+    }
+
+    freeaddrinfo(servinfo);
+   /* if ((sock_fd = socket(sa->sa_family, SOCK_STREAM, 0)) == -1) {
             perror("remote: socket");
             return -1;
 
@@ -444,18 +515,29 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     //cout<<i<<":";
     //printf("remote : %s\n",s_tmp);
     // connect to the new accepted peer.
-    int res = connect(sock_fd,  (struct sockaddr *) &their_addr, addr_len);
+    int res = -1;
+    if (sa->sa_family == AF_INET) {
+
+        struct sockaddr_in* addr = (struct sockaddr_in*)sa;
+        addr->sin_port = atoi(port);
+        res = connect(sock_fd, (struct sockaddr *) addr, addr_len);
+    }
+    else if (sa->sa_family == AF_INET6){
+        struct sockaddr_in6* addr = (struct sockaddr_in6*)sa;
+        addr->sin6_port = atoi(port);
+        res = connect(sock_fd,  (struct sockaddr *)addr, addr_len);
+    }
+
     if (res <0)
     {
         perror("remote: unable to connect()");
         return -1;
-    }
+    } */
+
     //add the socket desc to the list of writefds,
     //FD_SET(sock_fd , &tcp_write_fds);
 
-    if (fdmax < sock_fd){
-        fdmax = sock_fd;
-    }
+
 
     return sock_fd;
 }
@@ -709,6 +791,8 @@ int main(int argc, char *argv[])
                     if (i == tcp_receive_fd) {
                         // handle new connections
                         //accept the connection
+                        //VERY IMPORTANT LINE OF CODE TO GET HOST ADDRESS
+                        addr_len = sizeof their_addr;
                         sock_fd = accept(tcp_receive_fd, (struct sockaddr *) &their_addr, &addr_len);
 
                         if (sock_fd == -1) {
@@ -755,6 +839,17 @@ int main(int argc, char *argv[])
                                 else{
                                     // if there are no memebers in the group then difectly send NEWVIEW Message to the new member
                                     view_id++;
+                                    //get the name of the new peer
+                                    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+                                    cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
+                                    // look up the hostnames to get the pid of the peer
+                                    int res = get_pidofhost( hostnames, remote_host);
+                                    cout<<"host PID is :"<<res<<"\n";
+                                    if (res < 0){
+                                        cout<<"Unknown peer trying to connect\n";
+                                        continue;
+                                    }
+
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
