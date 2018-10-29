@@ -300,6 +300,7 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     cout<<"safamily : "<<sa->sa_family<<"\n";
     cout<<"addr_len : "<< addr_len;
 
+
     if ((sock_fd = socket(sa->sa_family, SOCK_STREAM, 0)) == -1) {
             perror("remote: socket");
             return -1;
@@ -313,6 +314,9 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
 
         struct sockaddr_in* addr = (struct sockaddr_in*)sa;
         addr->sin_port = atoi(port);
+
+        cout<<"port: "<<addr->sin_port<<"\n";
+        cout<<"ip: "<<addr->sin_addr<<"\n";
         res = connect(sock_fd, (struct sockaddr *) addr, addr_len);
     }
     else if (sa->sa_family == AF_INET6){
