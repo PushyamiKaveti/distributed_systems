@@ -310,14 +310,15 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     // connect to the new accepted peer.
     int res = -1;
     if (sa->sa_family == AF_INET) {
+
         struct sockaddr_in* addr = (struct sockaddr_in*)sa;
         addr->sin_port = atoi(port);
-        res = connect(sock_fd,  addr, addr_len);
+        res = connect(sock_fd, (struct sockaddr *) addr, addr_len);
     }
     else if (sa->sa_family == AF_INET6){
         struct sockaddr_in6* addr = (struct sockaddr_in6*)sa;
         addr->sin6_port = atoi(port);
-        res = connect(sock_fd,  addr, addr_len);
+        res = connect(sock_fd,  (struct sockaddr *)addr, addr_len);
     }
 
     if (res <0)
