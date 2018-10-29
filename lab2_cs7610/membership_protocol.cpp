@@ -871,7 +871,7 @@ int main(int argc, char *argv[])
                                     std::copy(membership_list.begin(), membership_list.end(), arr);
 
 
-                                    struct NEWVIEW_MESG *t = malloc(sizeof *t + (membership_list.size() * sizeof uint32_t));
+                                    NEWVIEW_MESG *t = malloc(sizeof *t + (membership_list.size() * sizeof uint32_t));
                                     t->newview_id = view_id;
                                     t->type = 3;
                                     t->no_members = (uint32_t ) membership_list.size() ;
