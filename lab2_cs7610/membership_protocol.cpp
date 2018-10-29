@@ -615,9 +615,9 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
         case 3:{
 
             NEWVIEW_MESG* b1 = (NEWVIEW_MESG *) buf;
-            NEWVIEW_MESG b;
+            NEWVIEW_MESG* b;
 
-            memcpy(&b, &buf, (sizeof(NEWVIEW_MESG)+ b1->no_members* sizeof(uint32_t)));
+            memcpy(b, &buf, (sizeof(NEWVIEW_MESG)+ b1->no_members* sizeof(uint32_t)));
             //print the new view
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
             cout<<"No of members in new view : "<<b->no_members<<"\n";
