@@ -166,7 +166,7 @@ int get_pidofhost( vector<string>& hostnames, char* remote_host){
 
 
         getnameinfo(servinfo->ai_addr, servinfo->ai_addrlen, s, sizeof (s), NULL, 0, NI_NUMERICHOST);
-
+        cout<<"host : "<<s<<"\n";
         if (strcmp(remote_host, s) == 0) {
             cout << "host is present at index " << i;
             found = true;
@@ -573,10 +573,12 @@ int main(int argc, char *argv[])
                                     cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                     // look up the hostnames to get the pid of the peer
                                     int res = get_pidofhost( hostnames, remote_host);
+                                    cout<<"host PID is :"<<res<<"\n";
                                     if (res < 0){
                                         cout<<"Unknown peer trying to connect\n";
                                         continue;
                                     }
+
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(res);
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
