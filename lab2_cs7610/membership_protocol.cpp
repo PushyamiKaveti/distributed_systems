@@ -315,8 +315,10 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
         struct sockaddr_in* addr = (struct sockaddr_in*)sa;
         addr->sin_port = atoi(port);
 
-        cout<<"port: "<<addr->sin_port<<"\n";
-        cout<<"ip: "<<addr->sin_addr<<"\n";
+        cout<<addr->sin_port;
+        cout<<"\n";
+        cout<<addr->sin_addr;
+        cout<<"\n";
         res = connect(sock_fd, (struct sockaddr *) addr, addr_len);
     }
     else if (sa->sa_family == AF_INET6){
