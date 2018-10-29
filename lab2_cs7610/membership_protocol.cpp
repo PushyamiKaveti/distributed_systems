@@ -614,17 +614,16 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
         }
         case 3:{
 
-            NEWVIEW_MESG* b1 = (NEWVIEW_MESG *) buf;
-            NEWVIEW_MESG* b;
+            NEWVIEW_MESG* b = (NEWVIEW_MESG *) buf;
 
-            memcpy(b, &buf, (sizeof(NEWVIEW_MESG)+ b1->no_members* sizeof(uint32_t)));
             //print the new view
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
             cout<<"No of members in new view : "<<b->no_members<<"\n";
-
-            for (uint32_t *i = b->member_list; *i ; ++i){
-                cout<< *i <<" , ";
-            }
+            uint32_t i = b->member_list[0];
+            cout<<i<<"\n";
+            //for (uint32_t *i = b->member_list; *i ; ++i){
+            //    cout<< *i <<" , ";
+            //}
             cout<<"\n";
             view_id = b->newview_id;
             cout<<"here"<<"\n";
