@@ -148,13 +148,32 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 
 int get_pidofhost( vector<string>& hostnames, char* remote_host){
     bool found = false;
+    struct addrinfo hints, *servinfo, *p;
+    char s[256];
+    int rv;
+    for (int i = 1; i < hostnames.size(); i++){
+        //for each hostname get addrssinfo
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+        hints.ai_socktype = SOCK_DGRAM;
 
-    for (int i = 0; i < hostnames.size(); i++)
-        if (strcmp(remote_host, hostnames[i].c_str()) == 0) {
+        if ((rv = getaddrinfo( hostnames[i].c_str(), "22222", &hints, &servinfo)) != 0) {
+            fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
+            return 1;
+        }
+
+        // loop through all the results and bind to the first we can
+
+
+        getnameinfo(servinfo->ai_addr, servinfo->ai_addrlen, s, sizeof (s), NULL, 0, NI_NUMERICHOST);
+
+        if (strcmp(remote_host, s) == 0) {
             std::cout << "host is present at index " << i;
             found = true;
             return (i+1);
         }
+    }
+
 
     if (!found) {
         std::cout << "Unknown host trying to contact";
@@ -550,7 +569,7 @@ int main(int argc, char *argv[])
                                     // if there are no memebers in the group then difectly send NEWVIEW Message to the new member
                                     view_id++;
                                     //get the name of the new peer
-                                    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NAMEREQD);
+                                    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
                                     cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                     // look up the hostnames to get the pid of the peer
                                     int res = get_pidofhost( hostnames, remote_host);
