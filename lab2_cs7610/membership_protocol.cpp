@@ -856,12 +856,13 @@ int main(int argc, char *argv[])
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
 
-                                     uint32_t arr[MAX_PROCESSES];
+                                    NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
+
+
                                      for (int k =0; k < membership_list.size(); k++){
-                                         arr[k] = membership_list.at(k);
+                                         m.member_list[k] = membership_list.at(k);
                                      }
-                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
-                                     m.member_list = arr;
+
                                      cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
 
                                     //int mesg_size = (sizeof(m.newview_id) + sizeof(m.no_members) + sizeof(m.type) + m.no_members * sizeof(uint32_t));
