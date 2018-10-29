@@ -914,13 +914,13 @@ int main(int argc, char *argv[])
                             cout<<"num of bytes received: "<<numbytes<<"\n";
                             // we got data on tcp connection different types of handling messages depending on leader or not
                             buf[numbytes] = '\0';
-
+                            uint32_t typ;
+                            memcpy(&typ, &buf, sizeof(uint32_t));
                             //handle the message
                             handle_messages(buf, typ, tcp_writefds , fdmax, pid);
 
                             //check the first few bytes and check the type of the message
-                            /*uint32_t typ;
-                            memcpy(&typ, &buf, sizeof(uint32_t));
+                            /*
                             uint32_t tmp;
                             memcpy(&tmp, &buf[(0* sizeof(uint32_t))], sizeof(uint32_t));
                             cout<<(0* sizeof(uint32_t))<<"\n";
