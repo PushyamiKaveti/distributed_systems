@@ -621,7 +621,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
             cout<<"No of members in new view : "<<b->no_members<<"\n";
             uint32_t* tmp;
-            memcpy(tmp, buf+ (3* sizeof(uint32_t)), b->no_members * sizeof(uint32_t));
+
             cout<< sizeof(b->member_list)<<"\n";
             //for (uint32_t *i = b->member_list; *i ; ++i){
             //    cout<< *i <<" , ";
@@ -920,6 +920,8 @@ int main(int argc, char *argv[])
                             //check the first few bytes and check the type of the message
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
+                            uint32_t* tmp;
+                            memcpy(tmp, &buf[(3* sizeof(uint32_t))], b->no_members * sizeof(uint32_t));
                             //handle the message
                             handle_messages(buf, typ, tcp_writefds , fdmax, pid);
 
