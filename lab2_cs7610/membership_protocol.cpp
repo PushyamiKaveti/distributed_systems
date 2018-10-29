@@ -611,10 +611,10 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                 pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                 request_map.erase(it);
 
-                NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list[0]};
-                char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
-                memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
-                multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
+                //NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list[0]};
+               // char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
+                //memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
+               // multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
                 //TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
                 // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
             }
@@ -866,7 +866,10 @@ int main(int argc, char *argv[])
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
-                                    NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list[0]};
+                                    uint32_t arr[membership_list.size()];
+                                    std::copy(membership_list.begin(), membership_list.end(), arr);
+
+                                    NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , arr};
                                     NEWVIEW_MESG m1;
                                     cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
 
