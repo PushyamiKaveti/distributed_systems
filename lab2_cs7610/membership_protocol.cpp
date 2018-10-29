@@ -920,8 +920,9 @@ int main(int argc, char *argv[])
                             //check the first few bytes and check the type of the message
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
-                            uint32_t* tmp;
-                            memcpy(tmp, &buf[(3* sizeof(uint32_t))], 2 * sizeof(uint32_t));
+                            uint32_t tmp;
+                            memcpy(&tmp, &buf[(3* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<tmp<<"\n";
                             //handle the message
                             handle_messages(buf, typ, tcp_writefds , fdmax, pid);
 
