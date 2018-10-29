@@ -764,12 +764,12 @@ int main(int argc, char *argv[])
     // select loop to send and receive messages
     while(1)
     {
-        if (send_HB && connection_established){
+        //if (send_HB && connection_established){
             //send the heartbeat message
-            HEARTBEAT h{4, pid};
-            multicast_mesgs(&h, udp_writefds, fdmax, 4);
-            send_HB = false;
-        }
+        //    HEARTBEAT h{4, pid};
+       //     multicast_mesgs(&h, udp_writefds, fdmax, 4);
+        //    send_HB = false;
+       // }
 
         //TODO: check for timer gone off
         //TODO: If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits
