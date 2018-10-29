@@ -614,6 +614,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
         case 3:{
 
             NEWVIEW_MESG *b = (NEWVIEW_MESG*) buf;
+            cout<<"view id received: "<<b->newview_id<<"\n";
             view_id = b->newview_id;
 
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
