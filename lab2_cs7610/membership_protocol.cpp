@@ -921,9 +921,32 @@ int main(int argc, char *argv[])
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             uint32_t tmp;
+                            memcpy(&tmp, &buf[(0* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<tmp<<"\n";
+                            memcpy(&tmp, &buf[(1* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<tmp<<"\n";
+                            memcpy(&tmp, &buf[(2* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(3* sizeof(uint32_t))], sizeof(uint32_t));
                             cout<<(3* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
+                            memcpy(&tmp, &buf[(4* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<tmp<<"\n";
+                            memcpy(&tmp, &buf[(5* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<tmp<<"\n";
+                            memcpy(&tmp, &buf[(6* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<tmp<<"\n";
+                            memcpy(&tmp, &buf[(7* sizeof(uint32_t))], sizeof(uint32_t));
+                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<tmp<<"\n";
+
+
                             //handle the message
                             handle_messages(buf, typ, tcp_writefds , fdmax, pid);
 
