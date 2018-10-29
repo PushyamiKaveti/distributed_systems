@@ -26,6 +26,7 @@
 #include <map>
 
 #include <sstream>
+#include <typeinfo>
 
 
 #define MAXBUFLEN 100
@@ -625,8 +626,8 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             //    cout<< *i <<" , ";
             //}
             //cout<<"\n";
-
-            view_id = (uint32_t) b->newview_id;
+            cout << typeid(b->newview_id).name() << endl;
+            view_id = (uint32_t) (b->newview_id);
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
 
             //TODO: When a peer updates its view add the new members to the heartbeat timeout map and remove the
