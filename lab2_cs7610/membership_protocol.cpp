@@ -148,6 +148,7 @@ void get_hostnames(char* hostfile, vector <string>* hostnames)
 
 int get_pidofhost( vector<string>& hostnames, char* remote_host){
     bool found = false;
+    cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
     for (int i = 0; i < hostnames.size(); i++)
         if (strcmp(remote_host, hostnames[i].c_str()) == 0) {
             std::cout << "host is present at index " << i;
@@ -549,7 +550,7 @@ int main(int argc, char *argv[])
                                     // if there are no memebers in the group then difectly send NEWVIEW Message to the new member
                                     view_id++;
                                     //get the name of the new peer
-                                    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+                                    getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NAMEREQD);
                                     // look up the hostnames to get the pid of the peer
                                     int res = get_pidofhost( hostnames, remote_host);
                                     if (res < 0){
