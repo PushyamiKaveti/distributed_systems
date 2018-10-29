@@ -860,7 +860,7 @@ int main(int argc, char *argv[])
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
-                                    
+
                                     cout<<"creating new view message\n"<<"no of memebers :"<<membership_list.size()<<"\n";
                                     cout<<"size of message"<<(sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t))<<"\n";
 
@@ -914,6 +914,7 @@ int main(int argc, char *argv[])
                             }
 
                         } else {
+                            cout<<"num of bytes received: "<<numbytes<<"\n";
                             // we got data on tcp connection different types of handling messages depending on leader or not
                             buf[numbytes] = '\0';
                             //check the first few bytes and check the type of the message
