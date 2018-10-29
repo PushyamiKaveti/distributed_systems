@@ -614,10 +614,10 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
         }
         case 3:{
 
-            NEWVIEW_MESG* b = (NEWVIEW_MESG *) buf;
+            NEWVIEW_MESG* b1 = (NEWVIEW_MESG *) buf;
+            NEWVIEW_MESG b;
 
-
-
+            memcpy(&b, &buf, (sizeof(NEWVIEW_MESG)+ b1->no_members* sizeof(uint32_t)));
             //print the new view
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
             cout<<"No of members in new view : "<<b->no_members<<"\n";
@@ -860,7 +860,8 @@ int main(int argc, char *argv[])
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
-                                    char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
+
+                                    char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
                                     memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
                                     multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
                                     // TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
