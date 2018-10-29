@@ -860,7 +860,8 @@ int main(int argc, char *argv[])
                                      for (int k =0; k < membership_list.size(); k++){
                                          arr[k] = membership_list.at(k);
                                      }
-                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {arr}};
+                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
+                                     m.member_list = arr;
                                      cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
 
                                     //int mesg_size = (sizeof(m.newview_id) + sizeof(m.no_members) + sizeof(m.type) + m.no_members * sizeof(uint32_t));
