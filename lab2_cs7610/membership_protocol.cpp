@@ -296,8 +296,10 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     struct sockaddr* sa = (struct sockaddr *) &their_addr;
     addr_len = sizeof their_addr;
 
+
     cout<<"safamily : "<<sa->sa_family<<"\n";
     cout<<"addr_len : "<< addr_len;
+
     if ((sock_fd = socket(sa->sa_family, SOCK_STREAM, 0)) == -1) {
             perror("remote: socket");
             return -1;
@@ -306,7 +308,18 @@ int connect_to_new_member(struct sockaddr_storage their_addr, char* port, sockle
     //cout<<i<<":";
     //printf("remote : %s\n",s_tmp);
     // connect to the new accepted peer.
-    int res = connect(sock_fd,  sa, addr_len);
+    int res = -1;
+    if (sa->sa_family == AF_INET) {
+        struct sockaddr_in* addr = (struct sockaddr_in*)sa;
+        addr->sin_port = atoi(port);
+        res = connect(sock_fd,  addr, addr_len);
+    }
+    else if (sa->sa_family == AF_INET6){
+        struct sockaddr_in6* addr = (struct sockaddr_in*)sa;
+        addr->sin6_port = atoi(port);
+        res = connect(sock_fd,  addr, addr_len);
+    }
+
     if (res <0)
     {
         perror("remote: unable to connect()");
