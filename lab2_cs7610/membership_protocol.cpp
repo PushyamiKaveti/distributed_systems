@@ -604,10 +604,13 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                 pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                 request_map.erase(it);
 
-                //NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list[0]};
-               // char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
-                //memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
-               // multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
+                NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
+
+                for (int k =0; k < membership_list.size(); k++){
+                    m.member_list[k] = membership_list.at(k);
+                }
+
+                 multicast_mesgs(&m , tcp_writefds, fdmax, 3);
                 //TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
                 // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
             }
