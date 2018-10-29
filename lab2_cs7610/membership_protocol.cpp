@@ -626,7 +626,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             //    cout<< *i <<" , ";
             //}
             //cout<<"\n";
-            view_id = (uint32_t) (b->newview_id);
+            view_id = b->newview_id;
             cout<<"here"<<"\n";
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
 
