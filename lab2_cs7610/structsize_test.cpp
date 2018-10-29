@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     vector<uint32_t> members2;
     members2.push_back(11);
 
-    NEWVIEW_MESG m{3, 1, 2, &members[0]};
+    /*NEWVIEW_MESG m{3, 1, 2, &members[0]};
 
     char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)), sizeof(char));
 
@@ -32,5 +32,5 @@ int main(int argc, char *argv[]) {
 
     for (auto &i : members2){
         cout<<i<<"\n";
-    }
+    } */
 }
