@@ -921,7 +921,7 @@ int main(int argc, char *argv[])
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             uint32_t* tmp;
-                            memcpy(tmp, &buf[(3* sizeof(uint32_t))], b->no_members * sizeof(uint32_t));
+                            memcpy(tmp, &buf[(3* sizeof(uint32_t))], 2 * sizeof(uint32_t));
                             //handle the message
                             handle_messages(buf, typ, tcp_writefds , fdmax, pid);
 
