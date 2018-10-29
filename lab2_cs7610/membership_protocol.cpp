@@ -290,10 +290,14 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
     }
 }
 
-int connect_to_new_member(struct sockaddr *sa, char* port, socklen_t addr_len, int& fdmax){
+int connect_to_new_member(struct sockaddr_storage their_addr, char* port, socklen_t addr_len, int& fdmax){
 
     int sock_fd;
+    struct sockaddr* sa = (struct sockaddr *) &their_addr;
+    addr_len = sizeof their_addr;
 
+    cout<<"safamily : "<<sa->sa_family<<"\n";
+    cout<<"addr_len : "<< addr_len;
     if ((sock_fd = socket(sa->sa_family, SOCK_STREAM, 0)) == -1) {
             perror("remote: socket");
             return -1;
@@ -476,7 +480,7 @@ int main(int argc, char *argv[])
                             // after calling connect the leader can use that sock fd to send messages to this new peer
                             if( pid == 1){
                                 // connect to the neew member to sent messages and get the socket.
-                                new_sock = connect_to_new_member((struct sockaddr *) &their_addr, port, addr_len, fdmax );
+                                new_sock = connect_to_new_member(their_addr, port, addr_len, fdmax );
                                 // Initiate the 2PC to add the new member
 
                                 // check if there are other memebers in the membershio list
