@@ -860,14 +860,14 @@ int main(int argc, char *argv[])
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
-
+                                    NEWVIEW_MESG m1;
                                     cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
                                     cout<<"size of uint pointer"<< sizeof (uint32_t*)<<"\n";
                                     cout<<"size of new message"<< sizeof(NEWVIEW_MESG)<<"\n";
-                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.no_members)<<"\n";
-                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.newview_id)<<"\n";
-                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.type)<<"\n";
-                                    cout<<"size of new message"<< sizeof(NEWVIEW_MESG.member_list)<<"\n";
+                                    cout<<"size of new message"<< sizeof(m1.no_members)<<"\n";
+                                    cout<<"size of new message"<< sizeof(m1.newview_id)<<"\n";
+                                    cout<<"size of new message"<< sizeof(m1.type)<<"\n";
+                                    cout<<"size of new message"<< sizeof(m1.member_list)<<"\n";
                                     cout<<"size of uint"<< sizeof(uint32_t)<<"\n";
                                     cout<<"size of memberlist "<< m.no_members<<"\n";
                                     cout<<"size of message"<<(sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t))<<"\n";
