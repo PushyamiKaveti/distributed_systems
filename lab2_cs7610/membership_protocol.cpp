@@ -852,39 +852,16 @@ int main(int argc, char *argv[])
                                 else{
                                     // if there are no memebers in the group then difectly send NEWVIEW Message to the new member
                                     view_id++;
-                                    //get the name of the new peer
-                                    //getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
-
-                                    // look up the hostnames to get the pid of the peer
-                                    //int res = get_pidofhost( hostnames, remote_host);
-
-                                    //if (res < 0){
-                                    //    cout<<"Unknown peer trying to connect\n";
-                                    //    continue;
-                                    //}
-
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
 
-                                    uint32_t arr[membership_list.size()];
-                                    std::copy(membership_list.begin(), membership_list.end(), arr);
-
-
-                                    NEWVIEW_MESG *t = malloc(sizeof (*t) + (membership_list.size() * sizeof (uint32_t)));
-                                    t->newview_id = view_id;
-                                    t->type = 3;
-                                    t->no_members = (uint32_t ) membership_list.size() ;
-                                    memcpy(&t->member_list, &arr, (2 * sizeof uint32_t)) ;
-
-                                    char* b1= (char *) malloc(sizeof *t + (membership_list.size() * sizeof uint32_t));
-                                    memcpy( b1, t, (sizeof *t + (membership_list.size() * sizeof uint32_t)));
-                                    //char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
-                                    // memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
-                                    multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
-
-                                    //NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , arr};
-                                   //cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
+                                     uint32_t arr[MAX_PROCESSES];
+                                     for (int k =0; k < membership_list.size(); k++){
+                                         arr[k] = membership_list.at(k);
+                                     }
+                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , arr};
+                                     cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
 
                                     //int mesg_size = (sizeof(m.newview_id) + sizeof(m.no_members) + sizeof(m.type) + m.no_members * sizeof(uint32_t));
                                    // cout<<"mesg size"<<mesg_size<<"\n";
@@ -892,7 +869,7 @@ int main(int argc, char *argv[])
                                     //memcpy( b1, &m, mesg_size);
                                     //char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
                                    // memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
-                                   // multicast_mesgs(b1 , tcp_writefds, fdmax, 3);
+                                     multicast_mesgs(&m , tcp_writefds, fdmax, 3);
                                     // TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
                                     // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
 
