@@ -37,7 +37,7 @@ typedef struct {
     uint32_t type; // must be equal to 3
     uint32_t newview_id; // the new view id evaluiated by leader
     uint32_t no_members;
-    uint32_t member_list[]; //list of pids of the members of the new view
+    uint32_t member_list[no_members]; //list of pids of the members of the new view
 } NEWVIEW_MESG;
 
 typedef struct {
