@@ -625,13 +625,16 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             cout<<"No of members in new view : "<<b->no_members<<"\n";
 
             //cout<< sizeof(b->member_list)<<"\n";
-            for (uint32_t *i = b->member_list; *i ; ++i){
-                cout<< *i <<" , ";
+            for (int i = 0; i< b->no_members ; ++i){
+                cout<< b->member_list[i] <<" , ";
             }
+            cout<<"\n";
             view_id = b->newview_id;
-            cout<<"here"<<"\n";
             membership_list.assign( b->member_list , b->member_list+ b->no_members);
 
+            for (int i =0; i<membership_list.size(); i++){
+                cout<<membership_list.at(0)<<"\n";
+            }
             //TODO: When a peer updates its view add the new members to the heartbeat timeout map and remove the
             // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
             break;
