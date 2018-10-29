@@ -875,7 +875,8 @@ int main(int argc, char *argv[])
                                     t->newview_id = view_id;
                                     t->type = 3;
                                     t->no_members = (uint32_t ) membership_list.size() ;
-                                    t->member_list = arr;
+                                    memcpy(&(t->member_list), &arr,(membership_list.size() * sizeof uint32_t)) ;
+
                                     char* b1= (char *) malloc(sizeof *t + (membership_list.size() * sizeof uint32_t));
                                     memcpy( b1, t, (sizeof *t + (membership_list.size() * sizeof uint32_t)));
                                     //char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
