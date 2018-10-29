@@ -168,7 +168,7 @@ int get_pidofhost( vector<string>& hostnames, char* remote_host){
         getnameinfo(servinfo->ai_addr, servinfo->ai_addrlen, s, sizeof (s), NULL, 0, NI_NUMERICHOST);
 
         if (strcmp(remote_host, s) == 0) {
-            std::cout << "host is present at index " << i;
+            cout << "host is present at index " << i;
             found = true;
             return (i+1);
         }
