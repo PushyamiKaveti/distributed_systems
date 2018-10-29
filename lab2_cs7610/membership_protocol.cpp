@@ -861,8 +861,11 @@ int main(int argc, char *argv[])
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
 
-                                    cout<<"creating new view message\n"<<"no of memebers :"<<membership_list.size()<<"\n";
-                                    cout<<"size of message"<<(sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t))<<"\n";
+                                    cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
+                                    cout<<"size of uint pointer"<< sizeof (uint32_t*)<<"\n";
+                                    cout<<"size of neew message"<< sizeof(NEWVIEW_MESG)<<"\n";
+                                    cout<<"size of memberlist "<< m.no_members<<"\n";
+                                    cout<<"size of message"<<(sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t))<<"\n";
 
                                     char* b1= (char *) calloc((sizeof(NEWVIEW_MESG)+ m.no_members * sizeof(uint32_t)), sizeof(char));
                                     memcpy( b1, &m, (sizeof(NEWVIEW_MESG)+ m.no_members* sizeof(uint32_t)));
@@ -922,28 +925,28 @@ int main(int argc, char *argv[])
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             uint32_t tmp;
                             memcpy(&tmp, &buf[(0* sizeof(uint32_t))], sizeof(uint32_t));
-                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<(0* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(1* sizeof(uint32_t))], sizeof(uint32_t));
-                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<(1* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(2* sizeof(uint32_t))], sizeof(uint32_t));
-                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<(2* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(3* sizeof(uint32_t))], sizeof(uint32_t));
                             cout<<(3* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(4* sizeof(uint32_t))], sizeof(uint32_t));
-                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<(4* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(5* sizeof(uint32_t))], sizeof(uint32_t));
-                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<(5* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(6* sizeof(uint32_t))], sizeof(uint32_t));
-                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<(6* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
                             memcpy(&tmp, &buf[(7* sizeof(uint32_t))], sizeof(uint32_t));
-                            cout<<(3* sizeof(uint32_t))<<"\n";
+                            cout<<(7* sizeof(uint32_t))<<"\n";
                             cout<<tmp<<"\n";
 
 
