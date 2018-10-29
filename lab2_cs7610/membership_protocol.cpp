@@ -866,14 +866,9 @@ int main(int argc, char *argv[])
                                     FD_SET(new_sock, &tcp_writefds);
                                     membership_list.push_back(new_pid);
                                     pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
-                                    NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , &membership_list[0]};
+                                    NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , membership_list.data()};
                                     NEWVIEW_MESG m1;
                                     cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
-
-                                    cout<<"size of new message"<< sizeof(m)<<"\n";
-                                    cout<<"size of new message"<< sizeof(m1.newview_id)<<"\n";
-                                    cout<<"size of new message"<< sizeof(m1.type)<<"\n";
-                                    cout<<"size of new message"<< sizeof(m1.member_list)<<"\n";
 
                                     int mesg_size = (sizeof(m.newview_id) + sizeof(m.no_members) + sizeof(m.type) + m.no_members * sizeof(uint32_t));
                                     cout<<"mesg size"<<mesg_size<<"\n";
