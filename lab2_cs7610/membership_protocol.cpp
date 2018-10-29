@@ -819,7 +819,7 @@ int main(int argc, char *argv[])
                                 cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                 // look up the hostnames to get the pid of the peer
                                 int new_pid = get_pidofhost( hostnames, remote_host);
-                                cout<<"\nhost PID is :"<<res<<"\n";
+                                cout<<"\nhost PID is :"<<new_pid<<"\n";
                                 if (new_pid < 0){
                                     cout<<"Unknown peer trying to connect\n";
                                     continue;

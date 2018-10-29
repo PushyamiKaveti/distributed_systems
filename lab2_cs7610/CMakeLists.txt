@@ -15,3 +15,4 @@ set(CMAKE_CXX_STANDARD 11)
 
 add_executable(prj2_mp membership_protocol.cpp)
 add_executable(size_test structsize_test.cpp)
+
