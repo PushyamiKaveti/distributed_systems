@@ -136,8 +136,8 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
                 }
 
             }
-
-            cout << "sent message of type : " << ty << "\n";
+            if (ty !=4)
+                cout << "sent message of type : " << ty << "\n";
             if (send(i, m, s, 0) == -1) {
                     perror("sent message");
             }
@@ -300,7 +300,11 @@ int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_rea
     cout<<"-----------------\n";
     for (auto &i : hostnames)
     {
-
+        //check if i is itself
+        if (strcmp(host, i.c_str()) == 0) {
+            //dont connect to itself
+            continue;
+        }
         //for each hostname get addrssinfo
         memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
