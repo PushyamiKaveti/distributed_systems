@@ -63,10 +63,56 @@ map<uint32_t , pair<bool, bool>> live_peer_map;
 int num_hosts = 0;
 bool connection_established = false;
 
+
+void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
+    int s = 0;
+    for (int i=0 ; i <=fdmax ;i++)
+    {
+        if (FD_ISSET(i, &writefds))
+        {
+
+            switch (ty){
+                case 1 :
+                {
+                    s = sizeof (REQ_MESG);
+                    break;
+                }
+                case 2:
+                {
+                    //sent only in case of peers
+                    s = sizeof(OK_MESG);
+                    break;
+                }
+                case 3 :
+                {
+                    NEWVIEW_MESG* b = (NEWVIEW_MESG *)m;
+                    //s = sizeof (NEWVIEW_MESG) + (b->no_members * sizeof(uint32_t));
+                    s = (sizeof(b->newview_id) + sizeof(b->no_members) + sizeof(b->type) + b->no_members * sizeof(uint32_t));
+                    break;
+                }
+                case 4 :
+                {
+                    s = sizeof(HEARTBEAT);
+                    break;
+                }
+
+            }
+            if (ty != 4)
+                cout << "sent message of type : " << ty << "\n";
+            if (send(i, m, s, 0) == -1) {
+                perror("sent message");
+            }
+        }
+    }
+}
+
+
+
+
 void initiate_delete(uint32_t remote_pid, int& request_id,  fd_set& tcp_writefds, int fdmax ){
 
    //create a new REquest message
-    REQ_MESG m {1, request_id, view_id, DEL, remote_pid};
+    REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, remote_pid};
     //remember pending request in leader here as we are not sending REQ to itself.
     pending_request = m;
 
@@ -78,8 +124,8 @@ void initiate_delete(uint32_t remote_pid, int& request_id,  fd_set& tcp_writefds
     pair<uint32_t, int> req_pair(remote_pid, tcp_sock);
     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
-    pair<uint32_t, int> req_pair(remote_pid, tcp_sock_read);
-    request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
+    pair<uint32_t, int> req_pair_read(remote_pid, tcp_sock_read);
+    request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_read));
 
     pair<uint32_t, int> req_pair_udp(remote_pid, udp_sock);
     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
@@ -87,9 +133,9 @@ void initiate_delete(uint32_t remote_pid, int& request_id,  fd_set& tcp_writefds
     //copy all the fds excpet for the one to be removed to a temp set
     fd_set writefds;
     //remove the tcp socket from
-    for(int i =0; i<fdmax, i++){
+    for(int i =0; i<fdmax; i++){
         if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
-            FD_SET(i, writefds)
+            FD_SET(i, writefds);
     }
     // multicast the REquest message to the tempset
     multicast_mesgs(&m , writefds, fdmax, 1);
@@ -154,47 +200,7 @@ void periodic_timer_thread(bool& s)
 }
 
 
-void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
-    int s = 0;
-    for (int i=0 ; i <=fdmax ;i++)
-    {
-        if (FD_ISSET(i, &writefds))
-        {
 
-            switch (ty){
-                case 1 :
-                {
-                    s = sizeof (REQ_MESG);
-                    break;
-                }
-                case 2:
-                {
-                    //sent only in case of peers
-                    s = sizeof(OK_MESG);
-                    break;
-                }
-                case 3 :
-                {
-                    NEWVIEW_MESG* b = (NEWVIEW_MESG *)m;
-                    //s = sizeof (NEWVIEW_MESG) + (b->no_members * sizeof(uint32_t));
-                    s = (sizeof(b->newview_id) + sizeof(b->no_members) + sizeof(b->type) + b->no_members * sizeof(uint32_t));
-                    break;
-                }
-                case 4 :
-                {
-                    s = sizeof(HEARTBEAT);
-                    break;
-                }
-
-            }
-            if (ty != 4)
-                cout << "sent message of type : " << ty << "\n";
-            if (send(i, m, s, 0) == -1) {
-                    perror("sent message");
-            }
-        }
-    }
-}
 
 int check_membership(){
     int c =0;
@@ -823,7 +829,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& origi
                     //remove the pid from the membership list
                     for (int i = 0; i < membership_list.size(); ++i) {
                         if(req_pid == membership_list.at(i)) {
-                            membership_list.erase(i);
+                            membership_list.erase(membership_list.begin()+i);
                             break;
                         }
                     }
@@ -887,7 +893,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& origi
                         //This is our guy
                         req_pid = membership_list.at(i);
                         //delete the member from list
-                        membership_list.erase(i);
+                        membership_list.erase(membership_list.begin()+i);
                     }
 
                 }
@@ -904,7 +910,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& origi
 
                 cout<<"Removing peer "<<req_pid<<" from live peers\n";
                 live_peer_map.erase(live_peer_map.find(req_pid));
-                
+
                 // update the view and membership list
                 view_id = b->newview_id;
 
@@ -987,7 +993,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& origi
     }
 }
 
-void check_livepeers(int& request_id, fd_set& tcp_writefds, int fdmax){
+/*void check_livepeers(int& request_id, fd_set& tcp_writefds, int fdmax){
 
     map<uint32_t , pair<bool,bool>>::iterator itr ;
     uint32_t p_id;
@@ -1014,9 +1020,9 @@ void check_livepeers(int& request_id, fd_set& tcp_writefds, int fdmax){
             //copy all the fds excpet for the one to be removed to a temp set
             fd_set writefds;
             //remove the tcp socket from
-            for(int i =0; i<fdmax, i++){
+            for(int i =0; i<fdmax; i++){
                 if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
-                    FD_SET(i, writefds)
+                    FD_SET(i, writefds);
             }
             // multicast the REquest message to the tempset
             multicast_mesgs(&m , writefds, fdmax, 1);
@@ -1025,7 +1031,7 @@ void check_livepeers(int& request_id, fd_set& tcp_writefds, int fdmax){
         //remove the live peer ifrom the live peers map
     }
     return;
-}
+}*/
 
 int main(int argc, char *argv[])
 {
@@ -1303,7 +1309,7 @@ int main(int argc, char *argv[])
 
                         //handle the message
 
-                        handle_messages(buf, typ, tcp_writefds ,udp_writefds, port, hostnames, fdmax, pid, request_id);
+                        handle_messages(buf, typ, tcp_writefds ,original, udp_writefds, port, hostnames, fdmax, pid, request_id);
 
                     }
                     else {
@@ -1325,7 +1331,7 @@ int main(int argc, char *argv[])
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             //handle the message
-                            handle_messages(buf, typ, tcp_writefds , udp_writefds, port, hostnames, fdmax, pid, request_id);
+                            handle_messages(buf, typ, tcp_writefds , original, udp_writefds, port, hostnames, fdmax, pid, request_id);
 
                             //check the first few bytes and check the type of the message
                             /*
