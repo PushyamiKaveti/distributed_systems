@@ -4,6 +4,7 @@
 
 //TODO: Fixing the variable stuff. Like make pis, hostnames, port number global
 //TODO: code to not send HEARTBEATS when peer crashed.
+//TODO:  CAN get rid of sock values in requst map because pid_sock_map already has the values in it. We can refer to that to get the sock values.
 
 #include <cstdint>
 #include <stdio.h>
@@ -39,10 +40,16 @@
 using namespace std;
 
 //map for process ids and socket descriptors of members
-map <uint32_t , int> pid_sock_membermap; // only require by leader to check for the members ids and theior corrsponidng sockets.
+map <uint32_t , int> pid_sock_tcpwrite_map; // only require by leader to check for the members ids and theior corrsponidng sockets.
+map <uint32_t , int> pid_sock_tcpread_map;
+//map for process ids and socket descriptors of members
+map <uint32_t , int> pid_sock_udp_map; //
+
+
 // Will be needed when removing a peer because we have to delete the socket from the list as well.
 // Alternatively we can each time go through the memeship list and get the socket ids from the map, send while doing multicast instead of using writefds
-map< uint32_t , pair<uint32_t, int >> request_map; // mapping between request id and (pid, socket)
+map< uint32_t , pair<uint32_t, int >> request_map_tcpwrite; // mapping between request id and (pid, socket)
+map< uint32_t , pair<uint32_t, int >> request_map_tcpread; // mapping between request id and (pid, socket)
 map< uint32_t , pair<uint32_t, int >> request_map_udp;
 
 REQ_MESG pending_request; // This only for peers and not for leader
@@ -50,14 +57,49 @@ REQ_MESG pending_request; // This only for peers and not for leader
 uint32_t view_id = 0;
 vector<uint32_t> membership_list;
 multimap <uint32_t , OK_MESG> OK_q;
+//map pid-> (isalive, reset)
 map<uint32_t , pair<bool, bool>> live_peer_map;
 
 int num_hosts = 0;
 bool connection_established = false;
 
+void initiate_delete(uint32_t remote_pid, int& request_id,  fd_set& tcp_writefds, int fdmax ){
 
+   //create a new REquest message
+    REQ_MESG m {1, request_id, view_id, DEL, remote_pid};
+    //remember pending request in leader here as we are not sending REQ to itself.
+    pending_request = m;
 
-void timeout_thread(uint32_t remote_pid, bool& reset)
+    int tcp_sock = pid_sock_tcpwrite_map.find(remote_pid)->second;
+    int tcp_sock_read = pid_sock_tcpread_map.find(remote_pid)->second;
+    int udp_sock = pid_sock_udp_map.find(remote_pid)->second;
+
+    //insert the request -> (pid, socket) mapping inside leader map.
+    pair<uint32_t, int> req_pair(remote_pid, tcp_sock);
+    request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
+
+    pair<uint32_t, int> req_pair(remote_pid, tcp_sock_read);
+    request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
+
+    pair<uint32_t, int> req_pair_udp(remote_pid, udp_sock);
+    request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
+
+    //copy all the fds excpet for the one to be removed to a temp set
+    fd_set writefds;
+    //remove the tcp socket from
+    for(int i =0; i<fdmax, i++){
+        if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
+            FD_SET(i, writefds)
+    }
+    // multicast the REquest message to the tempset
+    multicast_mesgs(&m , writefds, fdmax, 1);
+    //increment the request id
+    request_id ++;
+}
+
+// needs pid, tcp_writes, fdmax, request_id,
+
+void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, int& request_id, fd_set& tcp_writefds, int& fdmax)
 {
     clock_t start = clock();
     while(1)
@@ -70,6 +112,10 @@ void timeout_thread(uint32_t remote_pid, bool& reset)
                 if(it->second.first){
                     it->second.first = false;
                     cout<<"Peer "<<it->first<<" is not reachable...\n";
+
+                    //Initiate the delating process
+                    if(pid == LEADER)
+                        initiate_delete(it->first, request_id, tcp_writefds, fdmax);
                 }
 
 
@@ -94,6 +140,8 @@ void timeout_thread(uint32_t remote_pid, bool& reset)
     }
 
 }
+
+
 
 //a timer thread to send heartbeats
 void periodic_timer_thread(bool& s)
@@ -688,7 +736,7 @@ bool check_oks( uint32_t request_id){
 
 }
 
-void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_writefds, char* port, vector<string> hostnames, int fdmax, uint32_t pid) {
+void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, int fdmax, uint32_t pid, int& request_id) {
 
     printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
@@ -700,12 +748,13 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
             // save the data into a local message buffer ( buffer because there might be cases where the Req has not yet processed, but we received another Request to add)
             // But for this project it is just peers adding one by one . so May be just a variable might suffice
             pending_request = *b;
-
+             //TODO: check if the current view id at process is same as view id sendt in REQUEST MESSAGE
             // send an OK message
             OK_MESG m{2, b->request_id, b->cur_view_id, pid};
             // we can use multi cast because a peer has only leader in the writefds
             multicast_mesgs( &m, tcp_writefds, fdmax, 2);
             break;
+
         }
         case 2: {
              // ADD check cndition if this is the leader process or not
@@ -718,27 +767,80 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
             //cout<<"received ACK for msg:"<<b->msg_id<<"\n";
             OK_q.insert(pair<uint32_t, OK_MESG>(b->request_id, *b));
             if (check_oks(b->request_id)) {
-              //change the view and communicate it to all the peers
-                view_id++;
-                map < uint32_t , pair <uint32_t , int>>::iterator it = request_map.find(b->request_id);
+                //look for the request info in the maps
+                map < uint32_t , pair <uint32_t , int>>::iterator it = request_map_tcpwrite.find(b->request_id);
+                map < uint32_t , pair <uint32_t , int>>::iterator it_read = request_map_tcpread.find(b->request_id);
                 map < uint32_t , pair <uint32_t , int>>::iterator it2 = request_map_udp.find(b->request_id);
-                int new_sock = -1;
-                int new_sock_udp = -1;
-                uint32_t new_pid = 0;
+                int req_sock = -1;
+                int req_sock_read = -1;
+                int req_sock_udp = -1;
+                uint32_t req_pid = 0;
 
-                if (it != request_map.end() && it2!= request_map_udp.end()) {
-                    new_pid = it->second.first;
-                    new_sock = it->second.second;
-                    new_sock_udp = it2->second.second;
+                if (it != request_map_tcpwrite.end() && it_read != request_map_tcpread.end() && it2!= request_map_udp.end()) {
+                    req_pid = it->second.first;
+                    req_sock = it->second.second;
+                    req_sock_read = it_read->second.second;
+                    req_sock_udp = it2->second.second;
                 }
                 else{
                     cout<<"No request pending to add the peer. SOMETHING WRONG\n";
                     return;
                 }
-                FD_SET(new_sock, &tcp_writefds);
-                membership_list.push_back(new_pid);
-                pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
-                request_map.erase(it);
+
+                //change the view and communicate it to all the peers
+                view_id++;
+
+                //check for the type of message
+                if (pending_request.oper_type == ADD){
+                    //add the new socket to the tcp writes and udp writes, its already addded to original reads when connection is made.
+                    FD_SET(req_sock, &tcp_writefds);
+                    FD_SET(req_sock_udp, &udp_writefds);
+                    //add pid to the membership lists
+                    membership_list.push_back(req_pid);
+
+                    //leader adds the pid to sock maps for both tcp and udp channels of all the new members added
+                    pid_sock_tcpwrite_map.insert(pair<uint32_t, int>(req_pid, req_sock));
+                    pid_sock_tcpread_map.insert(pair<uint32_t, int>(req_pid, req_sock_read));
+                    pid_sock_udp_map.insert(pair<uint32_t, int>(req_pid, req_sock_udp));
+
+                    // When a leader updates its view add the new members to the heartbeat timeout map and remove the
+                    // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
+                    //pair consists of islive and reset bools
+                    cout<<"Adding peer "<<req_pid<<" to live peers\n";
+                    pair<bool, bool> pair_l(true, false);
+                    live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (req_pid, pair_l));
+                    thread t(timeout_thread , req_pid, ref(live_peer_map.find(req_pid)->second.second), pid, ref(request_id), ref(tcp_writefds), ref(fdmax));
+                    t.detach();
+
+                }
+                else if (pending_request.oper_type == DEL){
+                    //deletion of the member operations
+                    //delete the req socket from the tcp writes and udp writes and original
+                    FD_CLR(req_sock, &tcp_writefds);
+                    FD_CLR(req_sock_read, &original);
+                    FD_CLR(req_sock_udp, &udp_writefds);
+
+                    //remove the pid from the membership list
+                    for (int i = 0; i < membership_list.size(); ++i) {
+                        if(req_pid == membership_list.at(i)) {
+                            membership_list.erase(i);
+                            break;
+                        }
+                    }
+
+                    //leader deleted the socks from the sock id maps
+                    pid_sock_tcpread_map.erase(pid_sock_tcpread_map.find(req_pid));
+                    pid_sock_tcpwrite_map.erase(pid_sock_tcpwrite_map.find(req_pid));
+                    pid_sock_udp_map.erase(pid_sock_udp_map.find(req_pid));
+
+                    cout<<"Removing peer "<<req_pid<<" from live peers\n";
+
+                    live_peer_map.erase(live_peer_map.find(req_pid));
+
+                }
+
+                request_map_tcpwrite.erase(it);
+                request_map_tcpread.erase(it_read);
                 request_map_udp.erase(it2);
 
                 NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
@@ -748,14 +850,8 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
                 }
 
                  multicast_mesgs(&m , tcp_writefds, fdmax, 3);
-                // When a leader updates its view add the new members to the heartbeat timeout map and remove the
-                // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
-                //pair consists of islive and reset bools
-                cout<<"Adding peer "<<new_pid<<" to live peers\n";
-                pair<bool, bool> pair_l(true, false);
-                live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
-                thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second));
-                t.detach();
+
+
             }
             break;
         }
@@ -767,52 +863,98 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
             //print the new view
             cout<< "NEW VIEW_ID: "<<b->newview_id<<'\n';
             cout<<"No of members in new view : "<<b->no_members<<"\n";
+            int oper;
+            //determine if the new view is and ADD or DEL. Can also determine from pending request
+            if (b->no_members > membership_list.size())
+                oper = ADD;
+            else
+                oper = DEL;
 
-            //cout<< sizeof(b->member_list)<<"\n";
-            int p;
-            //iterate over the new memberlist
-            for (int i = 0; i< b->no_members ; ++i){
-                //get the pid of the member
-                p =  b->member_list[i];
-                //find the pid in live peer map
-                map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(p);
-                //if the peer is not present in map. it means it a new peer
-                if(it == live_peer_map.end()){
-                    // When a peer updates its view
-                    // Connect to the new peer via udp to send heart beats
-                    // add the new members to the heartbeat timeout map and remove the
-                    // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
-                    //Connect to the new peer
-                    //if the new member is not itself then add it to live peers and UDP sockets
-                    if(pid != p){
-
-                        int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port,fdmax);
-                        FD_SET(new_sock, &udp_writefds);
-
-                        //pair consists of islive and reset bools
-                        cout<<"Adding peer "<<p<<" to live peers\n";
-                        pair<bool, bool> pair_l(true, false);
-                        live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
-                        thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second));
-                        t.detach();
+            if(oper == DEL){
+                //find the deleted pid by going through each member and check if it is there in new memberlist
+                bool found = false;
+                uint32_t req_pid;
+                for (int i = 0; i < membership_list.size() ; ++i){
+                    for (int j = 0; j < b->no_members ; ++j){
+                        if(membership_list.at(i) == b->member_list[j]){
+                            found = true;
+                            continue;
+                        }
+                    }
+                    // right now we are assumiong that views are added one by one and all the view messages reach in FIFO reliable order.
+                    //Hence there is a chance to find only one memeber del
+                    if(!found){
+                        //This is our guy
+                        req_pid = membership_list.at(i);
+                        //delete the member from list
+                        membership_list.erase(i);
                     }
 
-
                 }
-                //prinput the peer list one by one
-                cout<< p<<" , ";
+
+                //delete this memeber from all the datastructures
+                map<uint32_t, int>::iterator it = pid_sock_udp_map.find(req_pid);
+                if(it != pid_sock_udp_map.end())
+                    FD_CLR(it->second, &udp_writefds);
+                else
+                    cout<<"ERROR: peer to be deleted not present in pid sock udp map...\n";
+
+                pid_sock_udp_map.erase(it);
+
+
+                cout<<"Removing peer "<<req_pid<<" from live peers\n";
+                live_peer_map.erase(live_peer_map.find(req_pid));
+                
+                // update the view and membership list
+                view_id = b->newview_id;
+
             }
-            cout<<"\n";
+            else{
+                int p;
+                //iterate over the new memberlist
+                for (int i = 0; i< b->no_members ; ++i){
+                    //get the pid of the member
+                    p =  b->member_list[i];
+                    //find the pid in live peer map
+                    map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(p);
+                    //if the peer is not present in map. it means it a new peer
+                    if(it == live_peer_map.end()){
+                        // When a peer updates its view
+                        // Connect to the new peer via udp to send heart beats
+                        // add the new members to the heartbeat timeout map and remove the
+                        // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
+                        //Connect to the new peer
+                        //if the new member is not itself then add it to live peers and UDP sockets
+                        if(pid != p){
 
-            // update the view and membership list
-            view_id = b->newview_id;
-            membership_list.assign( b->member_list , b->member_list+ b->no_members);
+                            int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port,fdmax);
+                            FD_SET(new_sock, &udp_writefds);
+                            pid_sock_udp_map.insert(pair<uint32_t, int>(p, new_sock));
 
-            //for (int i =0; i<membership_list.size(); i++){
-            //    cout<<membership_list.at(i)<<"\n";
-            //}
+                            //pair consists of islive and reset bools
+                            cout<<"Adding peer "<<p<<" to live peers\n";
+                            pair<bool, bool> pair_l(true, false);
+                            live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
+                            thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second), pid, ref(request_id), ref(tcp_writefds), ref(fdmax));
+                            t.detach();
+                        }
 
 
+                    }
+                    //prinput the peer list one by one
+                    cout<< p<<" , ";
+                }
+                cout<<"\n";
+
+                // update the view and membership list
+                view_id = b->newview_id;
+                membership_list.assign( b->member_list , b->member_list+ b->no_members);
+
+                //for (int i =0; i<membership_list.size(); i++){
+                //    cout<<membership_list.at(i)<<"\n";
+                //
+
+            }
 
             break;
         }
@@ -845,14 +987,42 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
     }
 }
 
-void check_livepeers(){
+void check_livepeers(int& request_id, fd_set& tcp_writefds, int fdmax){
+
     map<uint32_t , pair<bool,bool>>::iterator itr ;
-    uint32_t msg_id;
+    uint32_t p_id;
     for (itr = live_peer_map.begin() ; itr != live_peer_map.end(); ++itr){
         //check the liveness
         if(!itr->second.first){
-            cout<<"PEER "<<"itr->first"<<" not reachable\n";
+            //cout<<"PEER "<<"itr->first"<<" not reachable\n";
+            //Initiate the removal process
+            p_id =  itr->first;
+            // if there are other members in the group send the Req to all those members
+            REQ_MESG m {1, request_id, view_id, DEL, p_id};
+
+            // This can be changed as  a multicast to all write fds. Initially it will be empty
+            //send_ReqMesgs(&m, &tcp_writefds);
+            int tcp_sock = pid_sock_tcpwrite_map.find(p_id)->second;
+            int udp_sock = pid_sock_udp_map.find(p_id)->second;
+            //insert the request -> (pid, socket) mapping inside leader map.
+            pair<uint32_t, int> req_pair(p_id, tcp_sock);
+            request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
+
+            pair<uint32_t, int> req_pair_udp(p_id, udp_sock);
+            request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
+
+            //copy all the fds excpet for the one to be removed to a temp set
+            fd_set writefds;
+            //remove the tcp socket from
+            for(int i =0; i<fdmax, i++){
+                if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
+                    FD_SET(i, writefds)
+            }
+            // multicast the REquest message to the tempset
+            multicast_mesgs(&m , writefds, fdmax, 1);
+            request_id ++;
         }
+        //remove the live peer ifrom the live peers map
     }
     return;
 }
@@ -997,9 +1167,9 @@ int main(int argc, char *argv[])
 
         /*    no need of this
         // check for timer gone off is done in timer thread
-        //If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits
+        //If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits */
         //check_livepeers();
-        */
+
 
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
@@ -1062,15 +1232,18 @@ int main(int argc, char *argv[])
                                 if (check_membership() != 0){
                                     // if there are other members in the group send the Req to all those members
                                     REQ_MESG m {1, request_id, view_id, ADD, (uint32_t )new_pid};
+                                    //remember pending request in leader here as we are not sending REQ to itself.
+                                    pending_request = m;
                                     // This can be changed as  a multicast to all write fds. Initially it will be empty
                                     //send_ReqMesgs(&m, &tcp_writefds);
                                     //insert the request -> (pid, socket) mapping inside leader map.
                                     pair<uint32_t, int> req_pair(new_pid, new_sock);
-                                    request_map.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
+                                    request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
                                     pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
                                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
                                     multicast_mesgs(&m , tcp_writefds, fdmax, 1);
+                                    request_id ++;
                                 }
                                 else{
                                     // if there are no memebers in the group then difectly send NEWVIEW Message to the new member
@@ -1079,7 +1252,9 @@ int main(int argc, char *argv[])
                                     FD_SET(new_sock_udp, &udp_writefds);
 
                                     membership_list.push_back(new_pid);
-                                    pid_sock_membermap.insert(pair<uint32_t, int>(new_pid, new_sock));
+                                    //leader adds the member pid and sock maps for both tcp and udp connections for the new members
+                                    pid_sock_tcpwrite_map.insert(pair<uint32_t, int>(new_pid, new_sock));
+                                    pid_sock_udp_map.insert(pair<uint32_t, int>(new_pid, new_sock_udp));
 
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
 
@@ -1097,7 +1272,7 @@ int main(int argc, char *argv[])
                                     cout<<"Adding peer"<<new_pid<<" to live peers\n";
                                     pair<bool, bool> pair_l(true, false);
                                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
-                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second));
+                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second), pid, ref(request_id), ref(tcp_writefds), ref(fdmax));
                                     t.detach();
 
 
@@ -1128,7 +1303,7 @@ int main(int argc, char *argv[])
 
                         //handle the message
 
-                        handle_messages(buf, typ, tcp_writefds ,udp_writefds, port, hostnames, fdmax, pid);
+                        handle_messages(buf, typ, tcp_writefds ,udp_writefds, port, hostnames, fdmax, pid, request_id);
 
                     }
                     else {
@@ -1150,7 +1325,7 @@ int main(int argc, char *argv[])
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             //handle the message
-                            handle_messages(buf, typ, tcp_writefds , udp_writefds, port, hostnames, fdmax, pid);
+                            handle_messages(buf, typ, tcp_writefds , udp_writefds, port, hostnames, fdmax, pid, request_id);
 
                             //check the first few bytes and check the type of the message
                             /*
