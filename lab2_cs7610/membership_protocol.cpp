@@ -109,7 +109,7 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
 
 
 
-void initiate_delete(uint32_t remote_pid, int& request_id,  fd_set& tcp_writefds, int fdmax ){
+void initiate_delete(uint32_t remote_pid, uint32_t& request_id,  fd_set& tcp_writefds, int fdmax ){
 
    //create a new REquest message
     REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, remote_pid};
