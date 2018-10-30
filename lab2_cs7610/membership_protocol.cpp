@@ -145,7 +145,7 @@ void initiate_delete(uint32_t remote_pid, int& request_id,  fd_set& tcp_writefds
 
 // needs pid, tcp_writes, fdmax, request_id,
 
-void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, int& request_id, fd_set& tcp_writefds, int& fdmax)
+void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, uint32_t& request_id, fd_set& tcp_writefds, int& fdmax)
 {
     clock_t start = clock();
     while(1)
