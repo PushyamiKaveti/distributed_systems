@@ -305,7 +305,6 @@ int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_rea
         c=c+1;
         //check if i is itself
         if (strcmp(host, i.c_str()) == 0){
-            pid = c;
             //if current process is leader. NO ned to connect to other pers yet
             if (pid == 1)
                 return 0;
@@ -563,7 +562,7 @@ int connect_to_new_member_udp(struct sockaddr_storage their_addr, char* port, so
     puts(remote_host);
 
 
-    int udp_sock = 0
+    int udp_sock = 0;
     //******************************************************************//
     // UDP CONNECTION TO SEND HEART BEATS
     //******************************************************************//
@@ -573,7 +572,7 @@ int connect_to_new_member_udp(struct sockaddr_storage their_addr, char* port, so
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
 
-    if ((rv = getaddrinfo( remote_host.c_str(), port, &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo( remote_host, port, &hints, &servinfo)) != 0) {
         fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
         return 1;
     }
@@ -724,7 +723,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
                 int new_sock_udp = -1;
                 uint32_t new_pid = 0;
 
-                if (it != request_map.end() && it2!= request_map_udp.end() {
+                if (it != request_map.end() && it2!= request_map_udp.end()) {
                     new_pid = it->second.first;
                     new_sock = it->second.second;
                     new_sock_udp = it2->second.second;
