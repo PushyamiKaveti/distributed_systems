@@ -493,10 +493,13 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
     }
 }
 
-int connect_to_new_member_udp_bypid(uint32_t new_pid, vector<string> hostnames, char* port, int fdmax){
+int connect_to_new_member_udp_bypid(uint32_t new_pid, vector<string> hostnames, char* port, int fdmax, int pid){
     //establish tcp connections beyween processes for snapshot algorithm
     struct addrinfo hints, *servinfo, *p;
     int rv, sock_fd;
+    // if it is self then exit. No need to send heart beats to itself
+    if(pid == new_pid)
+        return;
     string host = hostnames.at((new_pid-1));
 
     //for each hostname get addrssinfo
@@ -780,7 +783,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
                     // TODO: add the new members to the heartbeat timeout map and remove the
                     // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                     //Connect to the new peer
-                     int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port,fdmax);
+                     int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port,fdmax, pid);
                      FD_SET(new_sock, &udp_writefds);
 
                     //pair consists of islive and reset bools
