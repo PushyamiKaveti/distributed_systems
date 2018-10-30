@@ -32,7 +32,7 @@
 
 #define MAXBUFLEN 100
 #define LEADER 1
-#define TIMEOUT 2
+#define TIMEOUT 4
 
 using namespace std;
 
@@ -1038,7 +1038,7 @@ int main(int argc, char *argv[])
                                 new_sock = connect_to_new_member(their_addr, port, addr_len, fdmax );
 
                                 // connect to the new member VIA UDP to send HEARTBEATS and get the socket.
-                                new_sock_udp = connect_to_new_member(their_addr, port, addr_len, fdmax );
+                                new_sock_udp = connect_to_new_member_udp(their_addr, port, addr_len, fdmax );
 
 
                                 // Initiate the 2PC to add the new member
