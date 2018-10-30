@@ -64,8 +64,8 @@ void timeout_thread(uint32_t remote_pid, bool& reset)
             map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(remote_pid);
             //if the pid is present in live_peer_map
             if(it != live_peer_map.end()){
-                if(it->second->first)
-                    it->second->first = false;
+                if(it->second.first)
+                    it->second.first = false;
                 return;
             }
             else{
@@ -634,8 +634,8 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                 // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                 //pair consists of islive and reset bools
                 pair<bool, bool> pair_l(true, false);
-                live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
-                thread t(timeout_thread , p, ref(live_peer_map.find(p)->second->second));
+                live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
+                thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second));
                 t.detach();
             }
             break;
@@ -663,7 +663,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                     //pair consists of islive and reset bools
                     pair<bool, bool> pair_l(true, false);
                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
-                    thread t(timeout_thread , p, ref(live_peer_map.find(p)->second->second));
+                    thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second));
                     t.detach();
 
                 }
@@ -694,9 +694,9 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             if(it != live_peer_map.end())
             {
                 //check if peer is live
-               if(it->second->first){
+               if(it->second.first){
                    //the peer is ,live and received one moe heart beat. SO reset its clock.
-                     it->second->second = true;
+                     it->second.second = true;
                }
                else{
                    cout<<"PEER timedout already. Cannot receive anymore heart beats. Waiting for view update.\n";
@@ -712,15 +712,16 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
     }
 }
 
-check_livepeers(){
+void check_livepeers(){
     map<uint32_t , pair<bool,bool>>::iterator itr ;
     uint32_t msg_id;
     for (itr = live_peer_map.begin() ; itr != live_peer_map.end(); ++itr){
         //check the liveness
-        if(!itr->second->first){
+        if(!itr->second.first){
             cout<<"PEER "<<"itr->first"<<" not reachable\n";
         }
     }
+    return;
 }
 
 int main(int argc, char *argv[])
@@ -949,7 +950,7 @@ int main(int argc, char *argv[])
                                     //pair consists of islive and reset bools
                                     pair<bool, bool> pair_l(true, false);
                                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
-                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second->second));
+                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second));
                                     t.detach();
 
 
