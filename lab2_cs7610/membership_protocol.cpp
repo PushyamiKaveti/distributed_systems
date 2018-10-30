@@ -135,7 +135,7 @@ void initiate_delete(uint32_t remote_pid, int& request_id,  fd_set& tcp_writefds
     //remove the tcp socket from
     for(int i =0; i<fdmax; i++){
         if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
-            FD_SET(i, writefds);
+            FD_SET(i, &writefds);
     }
     // multicast the REquest message to the tempset
     multicast_mesgs(&m , writefds, fdmax, 1);
@@ -742,7 +742,7 @@ bool check_oks( uint32_t request_id){
 
 }
 
-void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, int fdmax, uint32_t pid, int& request_id) {
+void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, int fdmax, uint32_t pid, uint32_t& request_id) {
 
     printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
