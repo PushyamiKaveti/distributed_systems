@@ -239,7 +239,7 @@ int get_pidofhost( vector<string>& hostnames, char* remote_host){
 }
 
 
-int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_readfds, fd_set& original, fd_set& udp_writefds,int& udp_receive_fd , int& fdmax){
+int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_readfds, fd_set& original, fd_set& udp_writefds,int& udp_receive_fd , int& fdmax, uint32_t pid){
     //---------------------------//
     // INITIALIZE THE UDP SOCKETS//
     //---------------------------//
@@ -960,7 +960,7 @@ int main(int argc, char *argv[])
 
 
     // Initialize UDP sockets
-    initialize_udp_sockets(port, hostnames , udp_readfds, original, udp_writefds, udp_receive_fd , fdmax);
+    initialize_udp_sockets(port, hostnames , udp_readfds, original, udp_writefds, udp_receive_fd , fdmax, pid);
 
     if (pid == 1){
         // This is the leader. Initialize the membership
