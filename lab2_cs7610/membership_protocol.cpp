@@ -637,6 +637,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                 //TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
                 // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                 //pair consists of islive and reset bools
+                cout<<"Adding peer "<<new_pid<<" to live peers\n";
                 pair<bool, bool> pair_l(true, false);
                 live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
                 thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second));
@@ -665,6 +666,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
                     //TODO: When a peer updates its view add the new members to the heartbeat timeout map and remove the
                     // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                     //pair consists of islive and reset bools
+                    cout<<"Adding peer "<<p<<" to live peers\n";
                     pair<bool, bool> pair_l(true, false);
                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
                     thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second));
@@ -694,6 +696,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set tcp_writefds , int fdmax, ui
             //TODO: else print unexpected behavior already time dout but received heart beat
             HEARTBEAT* b = (HEARTBEAT *) buf;
             map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(b->pid);
+            cout<<"Got HEARTBEAT FROM PEER "<<b->pid<<"\n";
             // if the pid of heartbeat message is present in live peer map
             if(it != live_peer_map.end())
             {
@@ -952,6 +955,7 @@ int main(int argc, char *argv[])
                                     // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                                     // inserting the new peer information
                                     //pair consists of islive and reset bools
+                                    cout<<"Adding peer"<<new_pid<<" to live peers\n";
                                     pair<bool, bool> pair_l(true, false);
                                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
                                     thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second));
