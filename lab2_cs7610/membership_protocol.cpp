@@ -64,8 +64,12 @@ void timeout_thread(uint32_t remote_pid, bool& reset)
             map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(remote_pid);
             //if the pid is present in live_peer_map
             if(it != live_peer_map.end()){
-                if(it->second.first)
+                if(it->second.first){
                     it->second.first = false;
+                    cout<<"Peer "<<it->first<<" is not reachable...\n";
+                }
+
+
                 return;
             }
             else{
@@ -861,9 +865,9 @@ int main(int argc, char *argv[])
             send_HB = false;
         }
 
-        //TODO: check for timer gone off
+        //TODO: check for timer gone off is done in timer thread
         //TODO: If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits
-        check_livepeers();
+        //check_livepeers();
 
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
