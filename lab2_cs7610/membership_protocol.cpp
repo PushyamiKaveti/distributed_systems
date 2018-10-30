@@ -2,6 +2,8 @@
 // Created by pushyamik on 10/23/18.
 //
 
+//TODO: Fixing the variable stuff. Like make pis, hostnames, port number global
+//TODO: code to not send HEARTBEATS when peer crashed.
 
 #include <cstdint>
 #include <stdio.h>
@@ -746,8 +748,8 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
                 }
 
                  multicast_mesgs(&m , tcp_writefds, fdmax, 3);
-                //TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
-                // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
+                // When a leader updates its view add the new members to the heartbeat timeout map and remove the
+                // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                 //pair consists of islive and reset bools
                 cout<<"Adding peer "<<new_pid<<" to live peers\n";
                 pair<bool, bool> pair_l(true, false);
@@ -776,10 +778,10 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
                 map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(p);
                 //if the peer is not present in map. it means it a new peer
                 if(it == live_peer_map.end()){
-                    //TODO: When a peer updates its view
-                    //TODO: Connect to the new peer via udp to send heart beats
-                    // TODO: add the new members to the heartbeat timeout map and remove the
-                    // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
+                    // When a peer updates its view
+                    // Connect to the new peer via udp to send heart beats
+                    // add the new members to the heartbeat timeout map and remove the
+                    // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                     //Connect to the new peer
                     //if the new member is not itself then add it to live peers and UDP sockets
                     if(pid != p){
@@ -815,9 +817,9 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
             break;
         }
         case 4:{
-            // TODO: check if the member is not timed out from the map pid->timeout bool
-            // TODO: if not timed out reset the timer if its there
-            //TODO: else print unexpected behavior already time dout but received heart beat
+            //  check if the member is not timed out from the map pid->timeout bool
+            //  if not timed out reset the timer if its there
+            //  else print unexpected behavior already time dout but received heart beat
             HEARTBEAT* b = (HEARTBEAT *) buf;
             map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(b->pid);
             cout<<"Got HEARTBEAT FROM PEER "<<b->pid<<"\n";
@@ -993,9 +995,11 @@ int main(int argc, char *argv[])
             send_HB = false;
         }
 
-        //TODO: check for timer gone off is done in timer thread
-        //TODO: If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits
+        /*    no need of this
+        // check for timer gone off is done in timer thread
+        //If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits
         //check_livepeers();
+        */
 
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
@@ -1086,8 +1090,8 @@ int main(int argc, char *argv[])
 
                                      cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
                                      multicast_mesgs(&m , tcp_writefds, fdmax, 3);
-                                    // TODO: When a leader updates its view add the new members to the heartbeat timeout map and remove the
-                                    // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
+                                    //  When a leader updates its view add the new members to the heartbeat timeout map and remove the
+                                    // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                                     // inserting the new peer information
                                     //pair consists of islive and reset bools
                                     cout<<"Adding peer"<<new_pid<<" to live peers\n";
@@ -1121,7 +1125,7 @@ int main(int argc, char *argv[])
                         uint32_t typ;
                         memcpy(&typ, &buf, sizeof(uint32_t));
                         //This must be heartbeat message
-                         //TODO:
+
                         //handle the message
 
                         handle_messages(buf, typ, tcp_writefds ,udp_writefds, port, hostnames, fdmax, pid);
