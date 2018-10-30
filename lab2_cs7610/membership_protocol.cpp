@@ -493,13 +493,11 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
     }
 }
 
-int connect_to_new_member_udp_bypid(uint32_t new_pid, vector<string> hostnames, char* port, int fdmax, int pid){
+int connect_to_new_member_udp_bypid(uint32_t new_pid, vector<string> hostnames, char* port, int fdmax){
     //establish tcp connections beyween processes for snapshot algorithm
     struct addrinfo hints, *servinfo, *p;
     int rv, sock_fd;
-    // if it is self then exit. No need to send heart beats to itself
-    if(pid == new_pid)
-        return;
+
     string host = hostnames.at((new_pid-1));
 
     //for each hostname get addrssinfo
@@ -783,18 +781,23 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& udp_w
                     // TODO: add the new members to the heartbeat timeout map and remove the
                     // TODO : deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                     //Connect to the new peer
-                     int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port,fdmax, pid);
-                     FD_SET(new_sock, &udp_writefds);
+                    //if the new member is not itself then add it to live peers and UDP sockets
+                    if(pid != p){
 
-                    //pair consists of islive and reset bools
-                    cout<<"Adding peer "<<p<<" to live peers\n";
-                    pair<bool, bool> pair_l(true, false);
-                    live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
-                    thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second));
-                    t.detach();
+                        int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port,fdmax);
+                        FD_SET(new_sock, &udp_writefds);
+
+                        //pair consists of islive and reset bools
+                        cout<<"Adding peer "<<p<<" to live peers\n";
+                        pair<bool, bool> pair_l(true, false);
+                        live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
+                        thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second));
+                        t.detach();
+                    }
+
 
                 }
-                //prinput the new peer
+                //prinput the peer list one by one
                 cout<< p<<" , ";
             }
             cout<<"\n";
