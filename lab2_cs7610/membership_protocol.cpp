@@ -181,7 +181,7 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
         pid_sock_tcpwrite_map.erase(pid_sock_tcpwrite_map.find(remote_pid));
         pid_sock_udp_map.erase(pid_sock_udp_map.find(remote_pid));
 
-        cout<<"Removing peer "<<req_pid<<" from live peers\n";
+        cout<<"Removing peer "<<remote_pid<<" from live peers\n";
 
         live_peer_map.erase(live_peer_map.find(remote_pid));
 
