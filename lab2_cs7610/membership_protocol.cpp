@@ -798,14 +798,14 @@ void *get_in_addr(struct sockaddr *sa)
 void get_hostnames(char* hostfile)
 {
     ifstream f (hostfile);
-    string line;S
+    string line;
     int i=0;
     if (f.is_open())
     {
         // cout<<"hostnames:\n"<<endl;
         while (getline(f , line))
         {
-            hostnames->push_back(line);
+            hostnames.push_back(line);
             i++;
             //cout<<line<<"\n";
         }
