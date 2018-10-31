@@ -1292,7 +1292,7 @@ void handle_heartbeats(char* buf){
 }
 
 //HEARTBEAT THREAD
-void heartbeat_thread(int udp_received_fd , fd_set& udp_writefds, uint32_t pid) {
+void heartbeat_thread(int udp_receive_fd , fd_set& udp_writefds, uint32_t pid) {
     bool send_HB = true;
 
     struct timeval tv;
@@ -1308,8 +1308,8 @@ void heartbeat_thread(int udp_received_fd , fd_set& udp_writefds, uint32_t pid) 
     thread timer_(periodic_timer_thread, std::ref(send_HB));
     fd_set udp_reads, master_reads;
     FD_ZERO(&udp_reads);
-    FD_SET(udp_received_fd, &udp_reads);
-    FD_SET(udp_received_fd, &master_reads);
+    FD_SET(udp_receive_fd, &udp_reads);
+    FD_SET(udp_receive_fd, &master_reads);
 
 
     // select loop to send and receive messages
@@ -1492,7 +1492,7 @@ int main(int argc, char *argv[])
     //timer for sending messages at regular time intervals. MIGHT HAV ETO START AFTER CONNECTION ESTABLISHED> ANY PROBLEM WITH THIS??
     //thread timer_(periodic_timer_thread , std::ref(send_HB));
 
-    thread heartbeat_(heartbeat_thread , udp_received_fd , ref (udp_writefds), pid );
+    thread heartbeat_(heartbeat_thread , udp_receive_fd , ref (udp_writefds), pid );
 
     // select loop to send and receive messages
     while(1)
