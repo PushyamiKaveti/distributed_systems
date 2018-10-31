@@ -400,9 +400,9 @@ int connect_to_new_member_udp(struct sockaddr_storage their_addr, socklen_t addr
     addr_len = sizeof their_addr;
     char remote_host[256];
 
-    cout<<"safamily : "<<sa->sa_family<<"\n";
-    cout<<"addr_len : "<< addr_len;
-    cout<<"port : "<< atoi(port);
+    //cout<<"safamily : "<<sa->sa_family<<"\n";
+    //cout<<"addr_len : "<< addr_len;
+   // cout<<"port : "<< atoi(port);
 
     struct addrinfo hints, *servinfo, *p;
 
@@ -468,9 +468,9 @@ int connect_to_new_member(struct sockaddr_storage their_addr, socklen_t addr_len
     addr_len = sizeof their_addr;
     char remote_host[256];
 
-    cout<<"safamily : "<<sa->sa_family<<"\n";
-    cout<<"addr_len : "<< addr_len;
-    cout<<"port : "<< atoi(port);
+    //cout<<"safamily : "<<sa->sa_family<<"\n";
+    //cout<<"addr_len : "<< addr_len;
+    //cout<<"port : "<< atoi(port);
 
     struct addrinfo hints, *servinfo, *p;
 
@@ -827,7 +827,7 @@ int get_pidofhost(char* remote_host){
         hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
         hints.ai_socktype = SOCK_DGRAM;
 
-        if ((rv = getaddrinfo( hostnames[i].c_str(), "22222", &hints, &servinfo)) != 0) {
+        if ((rv = getaddrinfo( hostnames[i].c_str(), port, &hints, &servinfo)) != 0) {
             fprintf(stderr, "gaddrinfo: %s\n", gai_strerror(rv));
             return 1;
         }
