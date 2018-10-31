@@ -1043,8 +1043,14 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             if(oper == DEL){
                 //find the deleted pid by going through each member and check if it is there in new memberlist
                 bool found = false;
-                uint32_t req_pid;
+                uint32_t req_pid = pending_request.pid;
+                cout<<"oper : "<<pending_request.oper_type<<" , process id :"<<pending_request.pid<<"\n";
                 for (int i = 0; i < membership_list.size() ; i++){
+                    if(membership_list.at(i) == req_pid){
+                        membership_list.erase(membership_list.begin()+i);
+                    }
+                }
+               /* for (int i = 0; i < membership_list.size() ; i++){
                     for (int j = 0; j < b->no_members ; j++){
                         if(membership_list.at(i) == b->member_list[j]){
                             found = true;
@@ -1062,7 +1068,8 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                         break;
                     }
 
-                }
+                }*/
+
 
                 //delete this memeber from all the datastructures
                 map<uint32_t, int>::iterator it = pid_sock_udp_map.find(req_pid);
