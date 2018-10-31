@@ -855,14 +855,25 @@ int get_pidofhost(char* remote_host){
     }
 }
 
-bool check_oks( uint32_t request_id){
+bool check_oks( uint32_t request_id, uint32_t oper_type){
 
     int num_acks = OK_q.count(request_id);
     //cout<<"checking if all acks are received\n";
     //check from all memebers except from the leader so -1
-    if (num_acks == (membership_list.size() -1)){
-        return true;
+    if(oper_type == ADD) {
+        if (num_acks == (membership_list.size() - 1))
+            return true;
     }
+        //check from all memebers except from the leader  and the member to be deleted so -2
+    else if (oper_type == DEL){
+        if (num_acks == (membership_list.size() - 2))
+            return true;
+    }
+    else{
+        cout<<"INVALID OPERTAION\n";
+        return false;
+    }
+
     return false;
 
 }
@@ -915,9 +926,10 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
              }
             //handle OK messages
             OK_MESG *b = (OK_MESG *) buf;
-            //cout<<"received ACK for msg:"<<b->msg_id<<"\n";
+            uint32_t oper_type= pending_request.oper_type;
+
             OK_q.insert(pair<uint32_t, OK_MESG>(b->request_id, *b));
-            if (check_oks(b->request_id)) {
+            if (check_oks(b->request_id, oper_type)) {
                 //look for the request info in the maps
                 map < uint32_t , pair <uint32_t , int>>::iterator it = request_map_tcpwrite.find(b->request_id);
                 map < uint32_t , pair <uint32_t , int>>::iterator it_read = request_map_tcpread.find(b->request_id);
