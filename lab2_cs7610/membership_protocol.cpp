@@ -1521,19 +1521,7 @@ int main(int argc, char *argv[])
     // select loop to send and receive messages
     while(1)
     {
-        //instead of senidng haert beats start the thread
 
-       /* if (send_HB && connection_established){
-            //send the heartbeat message
-            HEARTBEAT h{4, pid};
-            multicast_mesgs(&h, udp_writefds, 4);
-            send_HB = false;
-        } */
-
-        /*    no need of this
-        // check for timer gone off is done in timer thread
-        //If so print out the peer has gone down and mark the bool false in the map. Here the timer thread exits */
-        //check_livepeers();
         //LEADER CRASHED AND NEW LEADER PROTOCOL NEEDS T BE INITIATED
         if(new_leader_setup){
             initiate_newleader_protocol(pid);
