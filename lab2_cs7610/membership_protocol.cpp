@@ -137,7 +137,7 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
     //copy all the fds excpet for the one to be removed to a temp set
     fd_set writefds;
     //remove the tcp socket from
-    for(int i =0; i<fdmax; i++){
+    for(int i =0; i<=fdmax; i++){
         if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
             FD_SET(i, &writefds);
     }
