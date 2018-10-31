@@ -1148,10 +1148,21 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             NEWLEAD_RESP m;
             //if there is a pending request. that means this process has not received NEW VIEW message and leader crashed
             if(is_pending){
-                m{6, b->request_id, view_id, pending_request.oper_type, pending_request.pid};
+                m.type = 6;
+                m.request_id = b->request_id;
+                m.cur_view_id = view_id;
+                m.oper_type = pending_request.oper_type;
+                m.pid = pending_request.pid;
+
+                //{6, b->request_id, view_id, pending_request.oper_type, pending_request.pid};
             }
             else{
-                m{6, b->request_id, view_id, NOTHING, 0};
+                m.type = 6;
+                m.request_id = b->request_id;
+                m.cur_view_id = view_id;
+                m.oper_type = NOTHING;
+                m.pid = 0;
+               // m{6, b->request_id, view_id, NOTHING, 0};
             }
 
             multicast_mesgs( &m, tcp_writefds, 2);
