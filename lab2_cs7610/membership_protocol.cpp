@@ -564,7 +564,10 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
             if (ty != 4)
                 cout << "sent message of type : " << ty << "\n";
             if (send(i, m, s, 0) == -1) {
-                perror("sent message");
+                if(ty ==4)
+                    perror("error in heartbeat message");
+                else
+                    perror("sent message");
             }
         }
     }
@@ -1693,7 +1696,7 @@ int main(int argc, char *argv[])
                             }
 
                         } else {
-                            cout<<"num of bytes received: "<<numbytes<<"\n";
+                            //cout<<"num of bytes received: "<<numbytes<<"\n";
                             // we got data on tcp connection different types of handling messages depending on leader or not
                             buf[numbytes] = '\0';
                             uint32_t typ;
