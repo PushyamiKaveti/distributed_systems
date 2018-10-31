@@ -880,7 +880,7 @@ bool check_newlead_resps( uint32_t request_id){
 
 void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id) {
 
-    //printf(" Received message with type : \"%d  \"\n", ty);
+    printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
         case 1: {
 
@@ -909,7 +909,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
         }
         case 2: {
              // ADD check cndition if this is the leader process or not
-             if (pid != 1){
+             if (pid != LEADER){
                  cout<<"OK message received inside a peer. SOMETHING IS WRONG \n";
                  return;
              }
