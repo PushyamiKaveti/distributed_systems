@@ -35,7 +35,7 @@
 
 #define MAXBUFLEN 100
 //#define LEADER 1
-#define TIMEOUT 10
+#define TIMEOUT 15
 #define TCP 10
 #define UDP 11
 
