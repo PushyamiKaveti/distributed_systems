@@ -564,9 +564,9 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
             //if (ty != 4)
             cout << "sent message of type : " << ty << "\n";
             if (send(i, m, s, 0) == -1) {
-                if(ty ==4)
-                    perror("error in heartbeat message");
-                else
+                //perror("error in heartbeat message");
+                //ignoring heart beat failures.
+                if(ty !=4)
                     perror("sent message");
             }
         }
@@ -591,7 +591,7 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
     //there are members in the group other than the one which crashed
     if (c !=0 ){
         //create a new REquest message
-        REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, remote_pid};
+        REQ_MESG m {1, request_id, view_id, DEL, remote_pid};
         //remember pending request in leader here as we are not sending REQ to itself.
         pending_request = m;
         is_pending = true;
