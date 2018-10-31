@@ -134,7 +134,7 @@ int initialize_udp_sockets(fd_set& udp_readfds,int& udp_receive_fd, uint32_t pid
 
     //add the socket to the list of read fds, add to write fds as well
     FD_SET(udp_receive_fd , &udp_readfds);
-    FD_SET(udp_receive_fd , &original);
+    //FD_SET(udp_receive_fd , &original);
     if (fdmax < udp_receive_fd)
         fdmax = udp_receive_fd;
 
@@ -756,6 +756,7 @@ void periodic_timer_thread(bool& s)
 
     while(1) {
         this_thread::sleep_for(chrono::seconds(TIMEOUT));
+        cout<<"here\n";
         s = true;
     }
 }
@@ -1120,6 +1121,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             break;
         }
         case 4:{
+            cout<<"ITS IS AN ERROR. HEART BEATS SHOULDNT BE HANDLED HERE\n";
             //  check if the member is not timed out from the map pid->timeout bool
             //  if not timed out reset the timer if its there
             //  else print unexpected behavior already time dout but received heart beat
@@ -1264,45 +1266,104 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
     }
 }
 
-/*void check_livepeers(int& request_id, fd_set& tcp_writefds, int fdmax){
-
-    map<uint32_t , pair<bool,bool>>::iterator itr ;
-    uint32_t p_id;
-    for (itr = live_peer_map.begin() ; itr != live_peer_map.end(); ++itr){
-        //check the liveness
-        if(!itr->second.first){
-            //cout<<"PEER "<<"itr->first"<<" not reachable\n";
-            //Initiate the removal process
-            p_id =  itr->first;
-            // if there are other members in the group send the Req to all those members
-            REQ_MESG m {1, request_id, view_id, DEL, p_id};
-
-            // This can be changed as  a multicast to all write fds. Initially it will be empty
-            //send_ReqMesgs(&m, &tcp_writefds);
-            int tcp_sock = pid_sock_tcpwrite_map.find(p_id)->second;
-            int udp_sock = pid_sock_udp_map.find(p_id)->second;
-            //insert the request -> (pid, socket) mapping inside leader map.
-            pair<uint32_t, int> req_pair(p_id, tcp_sock);
-            request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
-
-            pair<uint32_t, int> req_pair_udp(p_id, udp_sock);
-            request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
-
-            //copy all the fds excpet for the one to be removed to a temp set
-            fd_set writefds;
-            //remove the tcp socket from
-            for(int i =0; i<fdmax; i++){
-                if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
-                    FD_SET(i, writefds);
-            }
-            // multicast the REquest message to the tempset
-            multicast_mesgs(&m , writefds, fdmax, 1);
-            request_id ++;
+void handle_heartbeats(char* buf){
+    //  check if the member is not timed out from the map pid->timeout bool
+    //  if not timed out reset the timer if its there
+    //  else print unexpected behavior already time dout but received heart beat
+    HEARTBEAT* b = (HEARTBEAT *) buf;
+    map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(b->pid);
+    cout<<"Got HEARTBEAT FROM PEER "<<b->pid<<"\n";
+    // if the pid of heartbeat message is present in live peer map
+    if(it != live_peer_map.end())
+    {
+        //check if peer is live
+        if(it->second.first){
+            //the peer is ,live and received one moe heart beat. SO reset its clock.
+            it->second.second = true;
         }
-        //remove the live peer ifrom the live peers map
+        else{
+            cout<<"PEER timedout already. Cannot receive anymore heart beats. Waiting for view update.\n";
+        }
     }
-    return;
-}*/
+    else{
+        cout<<"Peer not added yet. View not updated in all peers yet.\n";
+    }
+
+    break;
+}
+
+//HEARTBEAT THREAD
+void heartbeat_thread(int udp_received_fd , fd_set& udp_writefds) {
+    bool send_HB = true;
+
+    struct timeval tv;
+    int rv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 50000;
+    struct sockaddr_storage their_addr;
+    socklen_t addr_len;
+    int numbytes;
+    char buf[MAXBUFLEN];
+
+    //timer for sending messages at regular time intervals. MIGHT HAV ETO START AFTER CONNECTION ESTABLISHED> ANY PROBLEM WITH THIS??
+    thread timer_(periodic_timer_thread, std::ref(send_HB));
+    fd_set udp_reads, master_reads;
+    FD_ZERO(&udp_reads);
+    FD_SET(udp_received_fd, &udp_reads);
+    FD_SET(udp_received_fd, &master_reads);
+
+
+    // select loop to send and receive messages
+    while (1) {
+        if (send_HB && connection_established) {
+            //send the heartbeat message
+            HEARTBEAT h{4, pid};
+            multicast_mesgs(&h, udp_writefds, 4);
+            send_HB = false;
+        }
+
+
+        udp_reads = master_reads;
+        rv = select(fdmax + 1, &udp_reads, NULL, NULL, &tv);
+
+        if (rv == -1) {
+            perror("select"); // error occurred in select()
+            exit(1);
+        } else if (rv == 0) {
+            //printf("Timeout occurred!  No data after 5 seconds.\n");
+        } else {
+
+            // one of the descriptors have data
+            for (int i = 0; i <= fdmax; i++) {
+
+                if (FD_ISSET(i, &udp_reads)) {
+                    if (i == udp_receive_fd) {
+                        // received message
+                        addr_len = sizeof their_addr;
+                        if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0, (struct sockaddr *) &their_addr,
+                                                 &addr_len)) == -1) {
+                            perror("recvfrom");
+                            exit(1);
+                        }
+
+                        //printf("got packet from %s", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
+
+                        buf[numbytes] = '\0';
+                        //check the first few bytes and check the type of the message
+                        uint32_t typ;
+                        memcpy(&typ, &buf, sizeof(uint32_t));
+                        //This must be heartbeat message
+
+                        //handle the message
+
+                        handle_heartbeats(buf);
+                    }
+
+                }
+            }
+        }
+    }
+}
 
 
 int main(int argc, char *argv[])
@@ -1428,20 +1489,23 @@ int main(int argc, char *argv[])
     int new_sock = -1;
     int new_sock_udp = -1;
 
-    bool send_HB = true;
+    //bool send_HB = true;
     //timer for sending messages at regular time intervals. MIGHT HAV ETO START AFTER CONNECTION ESTABLISHED> ANY PROBLEM WITH THIS??
-    thread timer_(periodic_timer_thread , std::ref(send_HB));
+    //thread timer_(periodic_timer_thread , std::ref(send_HB));
 
+    thread heartbeat_(heartbeat_thread , udp_received_fd , ref (udp_writefds) );
 
     // select loop to send and receive messages
     while(1)
     {
-        if (send_HB && connection_established){
+        //instead of senidng haert beats start the thread
+
+       /* if (send_HB && connection_established){
             //send the heartbeat message
             HEARTBEAT h{4, pid};
             multicast_mesgs(&h, udp_writefds, 4);
             send_HB = false;
-        }
+        } */
 
         /*    no need of this
         // check for timer gone off is done in timer thread
@@ -1663,7 +1727,7 @@ int main(int argc, char *argv[])
                         }
 
                     }
-                    else if (i == udp_receive_fd){
+                    /*else if (i == udp_receive_fd){
                         // received message
                         addr_len = sizeof their_addr;
                         if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
@@ -1683,7 +1747,7 @@ int main(int argc, char *argv[])
 
                         handle_messages(buf, typ, pid, request_id);
 
-                    }
+                    }*/
                     else {
                         // receiving in any other sockets means it is getting messages from peers (here it is just the leader for membership protocol) connected to this
                         // handle data from a remote host
@@ -1725,7 +1789,7 @@ int main(int argc, char *argv[])
 
 
     }
-
+    heartbeat_.join();
     //
     return 0;
 }
