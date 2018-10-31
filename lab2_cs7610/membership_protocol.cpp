@@ -1177,7 +1177,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             if (check_newlead_resps(b->request_id)) {
                 // Assuming there is consistency in the type of operation among all the processes
                 uint32_t oper_type = NOTHING;
-                uint32_T req_pid = 0;
+                uint32_t req_pid = 0;
                 //get the oper type requested
                 pair<multimap<uint32_t, NEWLEAD_RESP>::iterator, multimap<uint32_t, NEWLEAD_RESP>::iterator> ret;
                 ret = newlead_resp_q.equal_range(b->request_id);
