@@ -1010,7 +1010,7 @@ void handle_messages(char* buf, uint32_t ty , char* port, vector<string> hostnam
 
 
                     }
-                    //prinput the peer list one by one
+                    // prinput the peer list one by one
                     cout<< p<<" , ";
                 }
                 cout<<"\n";
