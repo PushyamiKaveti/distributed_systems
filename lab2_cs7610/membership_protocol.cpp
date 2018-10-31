@@ -561,8 +561,8 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
                 }
 
             }
-            if (ty != 4)
-                cout << "sent message of type : " << ty << "\n";
+            //if (ty != 4)
+            //    cout << "sent message of type : " << ty << "\n";
             if (send(i, m, s, 0) == -1) {
                 if(ty ==4)
                     perror("error in heartbeat message");
