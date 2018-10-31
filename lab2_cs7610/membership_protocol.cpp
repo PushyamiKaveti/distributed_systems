@@ -821,7 +821,7 @@ int get_pidofhost(char* remote_host){
     struct addrinfo hints, *servinfo, *p;
     char s[256];
     int rv;
-    for (int i = 1; i < hostnames.size(); i++){
+    for (int i = 0; i < hostnames.size(); i++){
         //for each hostname get addrssinfo
         memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
@@ -836,7 +836,7 @@ int get_pidofhost(char* remote_host){
 
 
         getnameinfo(servinfo->ai_addr, servinfo->ai_addrlen, s, sizeof (s), NULL, 0, NI_NUMERICHOST);
-        cout<<"host : "<<s<<"\n";
+       // cout<<"host : "<<s<<"\n";
         if (strcmp(remote_host, s) == 0) {
             cout << "host is present at index " << i;
             found = true;
