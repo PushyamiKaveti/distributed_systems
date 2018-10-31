@@ -1047,7 +1047,8 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 bool found = false;
                 uint32_t req_pid = pending_request.pid;
                 cout<<"oper : "<<pending_request.oper_type<<" , process id :"<<pending_request.pid<<"\n";
-                for (int i = 0; i < membership_list.size() ; i++){
+                int num_elem = membership_list.size();
+                for (int i = 0; i < num_elem ; i++){
                     if(membership_list.at(i) == req_pid){
                         membership_list.erase(membership_list.begin()+i);
                     }
