@@ -63,6 +63,9 @@ map<uint32_t , pair<bool, bool>> live_peer_map;
 int num_hosts = 0;
 bool connection_established = false;
 
+fd_set tcp_writefds;
+
+
 
 void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
     int s = 0;
@@ -109,7 +112,7 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
 
 
 
-void initiate_delete(uint32_t remote_pid, uint32_t& request_id,  fd_set& tcp_writefds, int fdmax ){
+void initiate_delete(uint32_t remote_pid, uint32_t& request_id, int fdmax ){
 
    //create a new REquest message
     REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, remote_pid};
@@ -145,7 +148,7 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id,  fd_set& tcp_wri
 
 // needs pid, tcp_writes, fdmax, request_id,
 
-void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, uint32_t& request_id, fd_set& tcp_writefds, int& fdmax)
+void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, uint32_t& request_id, int& fdmax)
 {
     clock_t start = clock();
     while(1)
@@ -161,7 +164,7 @@ void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, uint32_t& reques
 
                     //Initiate the delating process
                     if(pid == LEADER)
-                        initiate_delete(it->first, request_id, tcp_writefds, fdmax);
+                        initiate_delete(it->first, request_id, fdmax);
                 }
 
 
@@ -419,7 +422,7 @@ int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_rea
 
 }
 
-int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_original, fd_set& tcp_write_fds, int& tcp_receive_fd, int& fdmax, uint32_t& pid){
+int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_original, int& tcp_receive_fd, int& fdmax, uint32_t& pid){
 
     //establish tcp connections beyween processes for snapshot algorithm
     struct addrinfo hints, *servinfo, *p;
@@ -526,7 +529,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
                         continue;
                     }
                     //add the socket desc to the list of writefds,
-                    FD_SET(sock_fd , &tcp_write_fds);
+                    FD_SET(sock_fd , &tcp_writefds);
                     if (fdmax < sock_fd){
                         fdmax = sock_fd;
                     }
@@ -742,7 +745,7 @@ bool check_oks( uint32_t request_id){
 
 }
 
-void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, int fdmax, uint32_t pid, uint32_t& request_id) {
+void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, int fdmax, uint32_t pid, uint32_t& request_id) {
 
     printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
@@ -941,7 +944,7 @@ void handle_messages(char* buf, uint32_t ty, fd_set& tcp_writefds ,fd_set& origi
                             cout<<"Adding peer "<<p<<" to live peers\n";
                             pair<bool, bool> pair_l(true, false);
                             live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
-                            thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second), pid, ref(request_id), ref(tcp_writefds), ref(fdmax));
+                            thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second), pid, ref(request_id), ref(fdmax));
                             t.detach();
                         }
 
@@ -1097,7 +1100,7 @@ int main(int argc, char *argv[])
     fd_set original;
 
     fd_set tcp_readfds;
-    fd_set tcp_writefds;
+    //fd_set tcp_writefds;
 
     fd_set udp_readfds;
     fd_set udp_writefds;
@@ -1137,7 +1140,7 @@ int main(int argc, char *argv[])
     FD_ZERO(&original);
 
     //Initialize tcp sockets and also updates the process id (pid)
-    initialize_sockets(port, hostnames , tcp_readfds, original, tcp_writefds, tcp_receive_fd , fdmax, pid);
+    initialize_sockets(port, hostnames , tcp_readfds, original, tcp_receive_fd , fdmax, pid);
 
     FD_ZERO(&udp_writefds);    // clear the write and temp sets
     FD_ZERO(&udp_readfds);
@@ -1241,7 +1244,7 @@ int main(int argc, char *argv[])
                                     //remember pending request in leader here as we are not sending REQ to itself.
                                     pending_request = m;
                                     // This can be changed as  a multicast to all write fds. Initially it will be empty
-                                    //send_ReqMesgs(&m, &tcp_writefds);
+
                                     //insert the request -> (pid, socket) mapping inside leader map.
                                     pair<uint32_t, int> req_pair(new_pid, new_sock);
                                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
@@ -1278,7 +1281,7 @@ int main(int argc, char *argv[])
                                     cout<<"Adding peer"<<new_pid<<" to live peers\n";
                                     pair<bool, bool> pair_l(true, false);
                                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
-                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second), pid, ref(request_id), ref(tcp_writefds), ref(fdmax));
+                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second), pid, ref(request_id), ref(fdmax));
                                     t.detach();
 
 
@@ -1309,7 +1312,7 @@ int main(int argc, char *argv[])
 
                         //handle the message
 
-                        handle_messages(buf, typ, tcp_writefds ,original, udp_writefds, port, hostnames, fdmax, pid, request_id);
+                        handle_messages(buf, typ ,original, udp_writefds, port, hostnames, fdmax, pid, request_id);
 
                     }
                     else {
@@ -1331,7 +1334,7 @@ int main(int argc, char *argv[])
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             //handle the message
-                            handle_messages(buf, typ, tcp_writefds , original, udp_writefds, port, hostnames, fdmax, pid, request_id);
+                            handle_messages(buf, typ , original, udp_writefds, port, hostnames, fdmax, pid, request_id);
 
                             //check the first few bytes and check the type of the message
                             /*
