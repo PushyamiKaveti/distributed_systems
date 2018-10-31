@@ -185,6 +185,7 @@ int initialize_udp_sockets(fd_set& udp_readfds,int& udp_receive_fd, uint32_t pid
                     //add the socket desc to the list of writefds, add to readfds as well
                     //store all the socket descriptors in fd sets
                     FD_SET(sock_fd, &udp_writefds);
+                    pid_sock_udp_map.insert(pair<uint32_t, int>(LEADER, sock_fd));
                     if (fdmax < sock_fd) {
                         fdmax = sock_fd;
                     }
@@ -1084,8 +1085,9 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                                 // TODO: Will have to change this eventually
                                 int new_sock = connect_to_new_member_bypid(p, UDP);
                                 FD_SET(new_sock, &udp_writefds);
+                                pid_sock_udp_map.insert(pair<uint32_t, int>(p, new_sock));
                             }
-                            pid_sock_udp_map.insert(pair<uint32_t, int>(p, new_sock));
+
 
                             //pair consists of islive and reset bools
                             cout<<"Adding peer "<<p<<" to live peers\n";
