@@ -1309,8 +1309,12 @@ int main(int argc, char *argv[])
                                     pair<uint32_t, int> req_pair(new_pid, new_sock);
                                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
+                                    pair<uint32_t, int> req_pair_read(new_pid, sock_fd);
+                                    request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_read));
+
                                     pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
                                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
+
                                     multicast_mesgs(&m , tcp_writefds, 1);
                                     request_id ++;
                                 }
