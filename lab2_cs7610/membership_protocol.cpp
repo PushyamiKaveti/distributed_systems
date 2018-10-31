@@ -115,36 +115,87 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
 
 void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
 
-   //create a new REquest message
-    REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, remote_pid};
-    //remember pending request in leader here as we are not sending REQ to itself.
-    pending_request = m;
+    //check if there are other members in the group
+    int c =0;
+    for (int i = 0; i < membership_list.size(); i++)
+    {
+        if (membership_list[i] != LEADER && membership_list[i] != remote_pid)
+            c++;
+    }
+
 
     int tcp_sock = pid_sock_tcpwrite_map.find(remote_pid)->second;
     int tcp_sock_read = pid_sock_tcpread_map.find(remote_pid)->second;
     int udp_sock = pid_sock_udp_map.find(remote_pid)->second;
 
-    //insert the request -> (pid, socket) mapping inside leader map.
-    pair<uint32_t, int> req_pair(remote_pid, tcp_sock);
-    request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
+    //there are members in the group other than the one which crashed
+    if (c !=0 ){
+        //create a new REquest message
+        REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, remote_pid};
+        //remember pending request in leader here as we are not sending REQ to itself.
+        pending_request = m;
 
-    pair<uint32_t, int> req_pair_read(remote_pid, tcp_sock_read);
-    request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_read));
+        //insert the request -> (pid, socket) mapping inside leader map.
+        pair<uint32_t, int> req_pair(remote_pid, tcp_sock);
+        request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
-    pair<uint32_t, int> req_pair_udp(remote_pid, udp_sock);
-    request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
+        pair<uint32_t, int> req_pair_read(remote_pid, tcp_sock_read);
+        request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_read));
 
-    //copy all the fds excpet for the one to be removed to a temp set
-    fd_set writefds;
-    //remove the tcp socket from
-    for(int i =0; i<=fdmax; i++){
-        if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
-            FD_SET(i, &writefds);
+        pair<uint32_t, int> req_pair_udp(remote_pid, udp_sock);
+        request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
+
+        //copy all the fds excpet for the one to be removed to a temp set
+        fd_set writefds;
+        FD_ZERO(&writefds);
+        //remove the tcp socket from
+        for(int i =0; i<=fdmax; i++){
+            if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
+                FD_SET(i, &writefds);
+        }
+        // multicast the REquest message to the tempset
+        multicast_mesgs(&m , writefds, 1);
+        //increment the request id
+        request_id ++;
     }
-    // multicast the REquest message to the tempset
-    multicast_mesgs(&m , writefds, 1);
-    //increment the request id
-    request_id ++;
+    else{
+        //No other members. So change view
+        view_id++:
+        //deletion of the member operations
+        //delete the req socket from the tcp writes and udp writes and original
+        FD_CLR(tcp_sock, &tcp_writefds);
+        FD_CLR(tcp_sock_read, &original);
+        FD_CLR(udp_sock, &udp_writefds);
+
+        //remove the pid from the membership list
+        for (int i = 0; i < membership_list.size(); ++i) {
+            if(remote_pid == membership_list.at(i)) {
+                membership_list.erase(membership_list.begin()+i);
+                break;
+            }
+        }
+
+        //leader deleted the socks from the sock id maps
+        pid_sock_tcpread_map.erase(pid_sock_tcpread_map.find(remote_pid));
+        pid_sock_tcpwrite_map.erase(pid_sock_tcpwrite_map.find(remote_pid));
+        pid_sock_udp_map.erase(pid_sock_udp_map.find(remote_pid));
+
+        cout<<"Removing peer "<<req_pid<<" from live peers\n";
+
+        live_peer_map.erase(live_peer_map.find(remote_pid));
+
+        //print the new view
+        cout<< "NEW VIEW_ID: "<<view_id<<'\n';
+        cout<<"No of members in new view : "<<membership_list.size()<<"\n";
+
+        for (int k =0; k < membership_list.size(); k++){
+            cout<<membership_list.at(k)<<" , ";
+        }
+        cout<<"\n";
+    }
+
+
+
 }
 
 // needs pid, tcp_writes, fdmax, request_id,
@@ -1271,6 +1322,7 @@ int main(int argc, char *argv[])
                                     membership_list.push_back(new_pid);
                                     //leader adds the member pid and sock maps for both tcp and udp connections for the new members
                                     pid_sock_tcpwrite_map.insert(pair<uint32_t, int>(new_pid, new_sock));
+                                    pid_sock_tcpread_map.insert(pair<uint32_t, int>(new_pid, sock_fd));
                                     pid_sock_udp_map.insert(pair<uint32_t, int>(new_pid, new_sock_udp));
 
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
