@@ -117,7 +117,7 @@ int initialize_udp_sockets(fd_set& udp_readfds,int& udp_receive_fd, uint32_t pid
         }
 
         //printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
-        setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(int))
+        //setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(int));
         if (bind(udp_receive_fd, p->ai_addr, p->ai_addrlen) == -1) {
             close(udp_receive_fd);
             perror("listener: bind");
