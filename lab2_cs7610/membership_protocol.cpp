@@ -1205,7 +1205,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     pair<uint32_t, int> req_pair(req_pid, new_sock);
                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
-                    pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
+                    pair<uint32_t, int> req_pair_udp(req_pid, new_sock_udp);
                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
 
                     multicast_mesgs(&m , tcp_writefds, 1);
@@ -1223,13 +1223,13 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     is_pending = true;
 
                     //insert the request -> (pid, socket) mapping inside leader map.
-                    pair<uint32_t, int> req_pair(remote_pid, tcp_sock);
+                    pair<uint32_t, int> req_pair(req_pid, tcp_sock);
                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
-                    pair<uint32_t, int> req_pair_read(remote_pid, tcp_sock_read);
+                    pair<uint32_t, int> req_pair_read(req_pid, tcp_sock_read);
                     request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_read));
 
-                    pair<uint32_t, int> req_pair_udp(remote_pid, udp_sock);
+                    pair<uint32_t, int> req_pair_udp(req_pid, udp_sock);
                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
 
                     //copy all the fds excpet for the one to be removed to a temp set
