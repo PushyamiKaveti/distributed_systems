@@ -13,6 +13,8 @@
 
 #define ADD 1
 #define DEL 2
+#define PENDING 3
+#define NOTHING 4
 #define MAX_PROCESSES 20
 
 using namespace std;
@@ -45,6 +47,21 @@ typedef struct {
     uint32_t type; // must be equal to 4
     uint32_t pid; //PID of the process sending heart beat
 } HEARTBEAT;
+
+typedef struct {
+    uint32_t type; // must be equal to 5
+    uint32_t request_id; // the request id
+    uint32_t cur_view_id; // the identifier current view at the leader
+    uint32_t oper_type; // type of operation ADD or DEL
+} NEWLEADER;
+
+typedef struct {
+    uint32_t type; // must be equal to 6
+    uint32_t request_id; // the request id
+    uint32_t cur_view_id; // the identifier current view at the leader
+    uint32_t oper_type; // type of operation ADD or DEL or NOTHING
+    uint32_t pid; //pid of the process  to be added or deleted
+} NEWLEAD_RESP;
 
 
 
