@@ -165,7 +165,7 @@ void timeout_thread(uint32_t remote_pid, bool& reset, int pid, uint32_t& request
 
                     //Initiate the delating process
                     if(pid == LEADER) {
-                        cout<<"Initiating Delete process\n";
+                        cout<<"Initiating Delete process \n";
                         initiate_delete(it->first, request_id);
                     }
                 }
