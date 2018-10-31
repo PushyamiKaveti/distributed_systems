@@ -35,7 +35,7 @@
 
 #define MAXBUFLEN 100
 #define LEADER 1
-#define TIMEOUT 4
+#define TIMEOUT 8
 
 using namespace std;
 
