@@ -89,6 +89,7 @@ int initialize_udp_sockets(fd_set& udp_readfds,int& udp_receive_fd, uint32_t pid
     char host[256];
     struct addrinfo hints, *servinfo, *p;
     int rv, sock_fd;
+    int yes=1;
 
     gethostname(host , sizeof (host));
     cout<<"My HOST:";
@@ -116,7 +117,7 @@ int initialize_udp_sockets(fd_set& udp_readfds,int& udp_receive_fd, uint32_t pid
         }
 
         //printf("listener: %s\n",inet_ntop(p->ai_family, get_in_addr(p->ai_addr), s, INET6_ADDRSTRLEN));
-
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(int))
         if (bind(udp_receive_fd, p->ai_addr, p->ai_addrlen) == -1) {
             close(udp_receive_fd);
             perror("listener: bind");
@@ -676,6 +677,7 @@ void initiate_newleader_protocol( int pid){
         if(cur < next_lead && cur != LEADER)
             next_lead = membership_list.at(i);
     }
+    cout<<"NEXT LEADER  IS PROCESS : "<<next_lead<<"\n";
     //update the leader variable
     LEADER = next_lead;
     //clear the socket set initially consisting of the previous leader
@@ -1049,7 +1051,10 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     if(membership_list.at(i) == req_pid){
                         membership_list.erase(membership_list.begin()+i);
                     }
+                    else
+                        cout<<membership_list.at(i)<<",";
                 }
+                cout<<"\n";
                /* for (int i = 0; i < membership_list.size() ; i++){
                     for (int j = 0; j < b->no_members ; j++){
                         if(membership_list.at(i) == b->member_list[j]){
@@ -1069,8 +1074,6 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     }
 
                 }*/
-
-
                 //delete this memeber from all the datastructures
                 map<uint32_t, int>::iterator it = pid_sock_udp_map.find(req_pid);
                 if(it != pid_sock_udp_map.end())
@@ -1723,7 +1726,7 @@ int main(int argc, char *argv[])
                                              cout<<membership_list.at(k)<<" , ";
                                          }
                                          cout<<"\n";
-                                         cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
+                                         //cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
                                          multicast_mesgs(&m , tcp_writefds, 3);
                                          //  When a leader updates its view add the new members to the heartbeat timeout map and remove the
                                          // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
