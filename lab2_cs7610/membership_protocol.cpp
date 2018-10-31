@@ -164,8 +164,10 @@ void timeout_thread(uint32_t remote_pid, bool& reset, int pid, uint32_t& request
                     cout<<"Peer "<<it->first<<" is not reachable...\n";
 
                     //Initiate the delating process
-                    if(pid == LEADER)
+                    if(pid == LEADER) {
+                        cout<<"Initiating Delete process\n";
                         initiate_delete(it->first, request_id);
+                    }
                 }
 
 
@@ -748,7 +750,7 @@ bool check_oks( uint32_t request_id){
 
 void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, uint32_t pid, uint32_t& request_id) {
 
-    printf(" Received message with type : \"%d  \"\n", ty);
+    //printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
         case 1: {
 
@@ -853,14 +855,19 @@ void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writ
                 request_map_tcpread.erase(it_read);
                 request_map_udp.erase(it2);
 
+                //print the new view
+                cout<< "NEW VIEW_ID: "<<view_id<<'\n';
+                cout<<"No of members in new view : "<<membership_list.size()<<"\n";
+
                 NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
 
                 for (int k =0; k < membership_list.size(); k++){
                     m.member_list[k] = membership_list.at(k);
+                    cout<<membership_list.at(k)<<" , ";
                 }
 
                  multicast_mesgs(&m , tcp_writefds, 3);
-
+                 cout<<"\n";
 
             }
             break;
@@ -1267,12 +1274,16 @@ int main(int argc, char *argv[])
                                     pid_sock_udp_map.insert(pair<uint32_t, int>(new_pid, new_sock_udp));
 
                                     NEWVIEW_MESG m{3, view_id , (uint32_t ) membership_list.size() , {}};
+                                    //print the new view
+                                    cout<< "NEW VIEW_ID: "<<view_id<<'\n';
+                                    cout<<"No of members in new view : "<<membership_list.size()<<"\n";
 
 
                                      for (int k =0; k < membership_list.size(); k++){
                                          m.member_list[k] = membership_list.at(k);
+                                         cout<<membership_list.at(k)<<" , ";
                                      }
-
+                                     cout<<"\n";
                                      cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
                                      multicast_mesgs(&m , tcp_writefds, 3);
                                     //  When a leader updates its view add the new members to the heartbeat timeout map and remove the
