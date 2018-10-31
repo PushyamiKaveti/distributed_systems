@@ -35,7 +35,7 @@
 
 #define MAXBUFLEN 100
 //#define LEADER 1
-#define TIMEOUT 15
+#define TIMEOUT 10
 #define TCP 10
 #define UDP 11
 
@@ -1303,6 +1303,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
     }
     return;
 }*/
+
 
 int main(int argc, char *argv[])
 {
