@@ -1044,20 +1044,22 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 //find the deleted pid by going through each member and check if it is there in new memberlist
                 bool found = false;
                 uint32_t req_pid;
-                for (int i = 0; i < membership_list.size() ; ++i){
-                    for (int j = 0; j < b->no_members ; ++j){
+                for (int i = 0; i < membership_list.size() ; i++){
+                    for (int j = 0; j < b->no_members ; j++){
                         if(membership_list.at(i) == b->member_list[j]){
                             found = true;
-                            continue;
+                            break;
                         }
                     }
                     // right now we are assumiong that views are added one by one and all the view messages reach in FIFO reliable order.
                     //Hence there is a chance to find only one memeber del
+                    // if found is true then we found a match in b-> memebers and membership list.
                     if(!found){
                         //This is our guy
                         req_pid = membership_list.at(i);
                         //delete the member from list
                         membership_list.erase(membership_list.begin()+i);
+                        break;
                     }
 
                 }
