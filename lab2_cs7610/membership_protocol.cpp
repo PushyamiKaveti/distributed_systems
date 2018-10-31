@@ -64,10 +64,11 @@ int num_hosts = 0;
 bool connection_established = false;
 
 fd_set tcp_writefds;
+int fdmax;
 
 
 
-void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
+void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
     int s = 0;
     for (int i=0 ; i <=fdmax ;i++)
     {
@@ -112,7 +113,7 @@ void multicast_mesgs(void* m, fd_set writefds, int fdmax, uint32_t  ty){
 
 
 
-void initiate_delete(uint32_t remote_pid, uint32_t& request_id, int fdmax ){
+void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
 
    //create a new REquest message
     REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, remote_pid};
@@ -141,14 +142,14 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id, int fdmax ){
             FD_SET(i, &writefds);
     }
     // multicast the REquest message to the tempset
-    multicast_mesgs(&m , writefds, fdmax, 1);
+    multicast_mesgs(&m , writefds, 1);
     //increment the request id
     request_id ++;
 }
 
 // needs pid, tcp_writes, fdmax, request_id,
 
-void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, uint32_t& request_id, int& fdmax)
+void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, uint32_t& request_id)
 {
     clock_t start = clock();
     while(1)
@@ -164,7 +165,7 @@ void timeout_thread(uint32_t remote_pid, bool& reset, int& pid, uint32_t& reques
 
                     //Initiate the delating process
                     if(pid == LEADER)
-                        initiate_delete(it->first, request_id, fdmax);
+                        initiate_delete(it->first, request_id);
                 }
 
 
@@ -298,7 +299,7 @@ int get_pidofhost( vector<string>& hostnames, char* remote_host){
 }
 
 
-int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_readfds, fd_set& original, fd_set& udp_writefds,int& udp_receive_fd , int& fdmax, uint32_t pid){
+int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_readfds, fd_set& original, fd_set& udp_writefds,int& udp_receive_fd, uint32_t pid){
     //---------------------------//
     // INITIALIZE THE UDP SOCKETS//
     //---------------------------//
@@ -422,7 +423,7 @@ int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_rea
 
 }
 
-int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_original, int& tcp_receive_fd, int& fdmax, uint32_t& pid){
+int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_original, int& tcp_receive_fd, uint32_t& pid){
 
     //establish tcp connections beyween processes for snapshot algorithm
     struct addrinfo hints, *servinfo, *p;
@@ -552,7 +553,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
     }
 }
 
-int connect_to_new_member_udp_bypid(uint32_t new_pid, vector<string> hostnames, char* port, int fdmax){
+int connect_to_new_member_udp_bypid(uint32_t new_pid, vector<string> hostnames, char* port){
     //establish tcp connections beyween processes for snapshot algorithm
     struct addrinfo hints, *servinfo, *p;
     int rv, sock_fd;
@@ -606,7 +607,7 @@ int connect_to_new_member_udp_bypid(uint32_t new_pid, vector<string> hostnames, 
 }
 
 
-int connect_to_new_member_udp(struct sockaddr_storage their_addr, char* port, socklen_t addr_len, int& fdmax){
+int connect_to_new_member_udp(struct sockaddr_storage their_addr, char* port, socklen_t addr_len){
     int rv;
     struct sockaddr* sa = (struct sockaddr *) &their_addr;
     addr_len = sizeof their_addr;
@@ -673,7 +674,7 @@ int connect_to_new_member_udp(struct sockaddr_storage their_addr, char* port, so
 
 }
 
-int connect_to_new_member(struct sockaddr_storage their_addr, char* port, socklen_t addr_len, int& fdmax){
+int connect_to_new_member(struct sockaddr_storage their_addr, char* port, socklen_t addr_len){
 
     int sock_fd, rv;
     struct sockaddr* sa = (struct sockaddr *) &their_addr;
@@ -745,7 +746,7 @@ bool check_oks( uint32_t request_id){
 
 }
 
-void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, int fdmax, uint32_t pid, uint32_t& request_id) {
+void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, uint32_t pid, uint32_t& request_id) {
 
     printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
@@ -761,7 +762,7 @@ void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writ
             // send an OK message
             OK_MESG m{2, b->request_id, b->cur_view_id, pid};
             // we can use multi cast because a peer has only leader in the writefds
-            multicast_mesgs( &m, tcp_writefds, fdmax, 2);
+            multicast_mesgs( &m, tcp_writefds, 2);
             break;
 
         }
@@ -818,7 +819,7 @@ void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writ
                     cout<<"Adding peer "<<req_pid<<" to live peers\n";
                     pair<bool, bool> pair_l(true, false);
                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (req_pid, pair_l));
-                    thread t(timeout_thread , req_pid, ref(live_peer_map.find(req_pid)->second.second), pid, ref(request_id), ref(fdmax));
+                    thread t(timeout_thread , req_pid, ref(live_peer_map.find(req_pid)->second.second), pid, ref(request_id));
                     t.detach();
 
                 }
@@ -858,7 +859,7 @@ void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writ
                     m.member_list[k] = membership_list.at(k);
                 }
 
-                 multicast_mesgs(&m , tcp_writefds, fdmax, 3);
+                 multicast_mesgs(&m , tcp_writefds, 3);
 
 
             }
@@ -936,7 +937,7 @@ void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writ
                         //if the new member is not itself then add it to live peers and UDP sockets
                         if(pid != p){
 
-                            int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port,fdmax);
+                            int new_sock = connect_to_new_member_udp_bypid(p,hostnames,port);
                             FD_SET(new_sock, &udp_writefds);
                             pid_sock_udp_map.insert(pair<uint32_t, int>(p, new_sock));
 
@@ -944,7 +945,7 @@ void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writ
                             cout<<"Adding peer "<<p<<" to live peers\n";
                             pair<bool, bool> pair_l(true, false);
                             live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
-                            thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second), pid, ref(request_id), ref(fdmax));
+                            thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second), pid, ref(request_id));
                             t.detach();
                         }
 
@@ -1106,7 +1107,7 @@ int main(int argc, char *argv[])
     fd_set udp_writefds;
 
 
-    int fdmax;
+   // int fdmax;
     uint32_t pid;
     int udp_receive_fd, sock_fd, tcp_receive_fd;
     char s[INET6_ADDRSTRLEN];
@@ -1140,14 +1141,14 @@ int main(int argc, char *argv[])
     FD_ZERO(&original);
 
     //Initialize tcp sockets and also updates the process id (pid)
-    initialize_sockets(port, hostnames , tcp_readfds, original, tcp_receive_fd , fdmax, pid);
+    initialize_sockets(port, hostnames , tcp_readfds, original, tcp_receive_fd , pid);
 
     FD_ZERO(&udp_writefds);    // clear the write and temp sets
     FD_ZERO(&udp_readfds);
 
 
     // Initialize UDP sockets
-    initialize_udp_sockets(port, hostnames , udp_readfds, original, udp_writefds, udp_receive_fd , fdmax, pid);
+    initialize_udp_sockets(port, hostnames , udp_readfds, original, udp_writefds, udp_receive_fd , pid);
 
     if (pid == 1){
         // This is the leader. Initialize the membership
@@ -1170,7 +1171,7 @@ int main(int argc, char *argv[])
         if (send_HB && connection_established){
             //send the heartbeat message
             HEARTBEAT h{4, pid};
-            multicast_mesgs(&h, udp_writefds, fdmax, 4);
+            multicast_mesgs(&h, udp_writefds, 4);
             send_HB = false;
         }
 
@@ -1218,10 +1219,10 @@ int main(int argc, char *argv[])
                             // after calling connect the leader can use that sock fd to send messages to this new peer
                             if( pid == 1){
                                 // connect to the new member to sent messages and get the socket.
-                                new_sock = connect_to_new_member(their_addr, port, addr_len, fdmax );
+                                new_sock = connect_to_new_member(their_addr, port, addr_len );
 
                                 // connect to the new member VIA UDP to send HEARTBEATS and get the socket.
-                                new_sock_udp = connect_to_new_member_udp(their_addr, port, addr_len, fdmax );
+                                new_sock_udp = connect_to_new_member_udp(their_addr, port, addr_len );
 
 
                                 // Initiate the 2PC to add the new member
@@ -1251,7 +1252,7 @@ int main(int argc, char *argv[])
 
                                     pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
                                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
-                                    multicast_mesgs(&m , tcp_writefds, fdmax, 1);
+                                    multicast_mesgs(&m , tcp_writefds, 1);
                                     request_id ++;
                                 }
                                 else{
@@ -1273,7 +1274,7 @@ int main(int argc, char *argv[])
                                      }
 
                                      cout<<"creating new view message\n"<<"no of members :"<<membership_list.size()<<"\n";
-                                     multicast_mesgs(&m , tcp_writefds, fdmax, 3);
+                                     multicast_mesgs(&m , tcp_writefds, 3);
                                     //  When a leader updates its view add the new members to the heartbeat timeout map and remove the
                                     // deleted members from the map and start the timeout thread and reset it everytime you receuived a heartbeat
                                     // inserting the new peer information
@@ -1281,7 +1282,7 @@ int main(int argc, char *argv[])
                                     cout<<"Adding peer"<<new_pid<<" to live peers\n";
                                     pair<bool, bool> pair_l(true, false);
                                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (new_pid, pair_l));
-                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second), pid, ref(request_id), ref(fdmax));
+                                    thread t(timeout_thread , new_pid, ref(live_peer_map.find(new_pid)->second.second), pid, ref(request_id));
                                     t.detach();
 
 
@@ -1312,7 +1313,7 @@ int main(int argc, char *argv[])
 
                         //handle the message
 
-                        handle_messages(buf, typ ,original, udp_writefds, port, hostnames, fdmax, pid, request_id);
+                        handle_messages(buf, typ ,original, udp_writefds, port, hostnames, pid, request_id);
 
                     }
                     else {
@@ -1334,7 +1335,7 @@ int main(int argc, char *argv[])
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             //handle the message
-                            handle_messages(buf, typ , original, udp_writefds, port, hostnames, fdmax, pid, request_id);
+                            handle_messages(buf, typ , original, udp_writefds, port, hostnames, pid, request_id);
 
                             //check the first few bytes and check the type of the message
                             /*
