@@ -818,7 +818,7 @@ void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writ
                     cout<<"Adding peer "<<req_pid<<" to live peers\n";
                     pair<bool, bool> pair_l(true, false);
                     live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (req_pid, pair_l));
-                    thread t(timeout_thread , req_pid, ref(live_peer_map.find(req_pid)->second.second), pid, ref(request_id), ref(tcp_writefds), ref(fdmax));
+                    thread t(timeout_thread , req_pid, ref(live_peer_map.find(req_pid)->second.second), pid, ref(request_id), ref(fdmax));
                     t.detach();
 
                 }
