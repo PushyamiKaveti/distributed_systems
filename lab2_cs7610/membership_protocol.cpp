@@ -63,7 +63,8 @@ map<uint32_t , pair<bool, bool>> live_peer_map;
 int num_hosts = 0;
 bool connection_established = false;
 
-fd_set tcp_writefds;
+fd_set tcp_writefds, original, udp_writefds;
+
 int fdmax;
 
 
@@ -160,7 +161,7 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
     }
     else{
         //No other members. So change view
-        view_id++:
+        view_id++;
         //deletion of the member operations
         //delete the req socket from the tcp writes and udp writes and original
         FD_CLR(tcp_sock, &tcp_writefds);
@@ -352,7 +353,7 @@ int get_pidofhost( vector<string>& hostnames, char* remote_host){
 }
 
 
-int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_readfds, fd_set& original, fd_set& udp_writefds,int& udp_receive_fd, uint32_t pid){
+int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_readfds,int& udp_receive_fd, uint32_t pid){
     //---------------------------//
     // INITIALIZE THE UDP SOCKETS//
     //---------------------------//
@@ -476,7 +477,7 @@ int initialize_udp_sockets(char* port,vector<string> hostnames , fd_set& udp_rea
 
 }
 
-int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, fd_set& tcp_original, int& tcp_receive_fd, uint32_t& pid){
+int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, int& tcp_receive_fd, uint32_t& pid){
 
     //establish tcp connections beyween processes for snapshot algorithm
     struct addrinfo hints, *servinfo, *p;
@@ -533,7 +534,7 @@ int initialize_sockets(char* port, vector <string> hostnames, fd_set& tcp_fds, f
 
     fdmax = tcp_receive_fd;
     // add the listener to the master set
-    FD_SET(tcp_receive_fd, &tcp_original);
+    FD_SET(tcp_receive_fd, &original);
     FD_SET(tcp_receive_fd, &tcp_fds);
 
     //loop through the hostnames to connect() which means that the port should be up for listening on the remote hosts. which mean bind(), listen() should already be running
@@ -799,7 +800,7 @@ bool check_oks( uint32_t request_id){
 
 }
 
-void handle_messages(char* buf, uint32_t ty ,fd_set& original , fd_set& udp_writefds, char* port, vector<string> hostnames, uint32_t pid, uint32_t& request_id) {
+void handle_messages(char* buf, uint32_t ty , char* port, vector<string> hostnames, uint32_t pid, uint32_t& request_id) {
 
     //printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
@@ -1156,13 +1157,13 @@ int main(int argc, char *argv[])
 
     struct timeval tv;
 
-    fd_set original;
+    //fd_set original;
 
     fd_set tcp_readfds;
     //fd_set tcp_writefds;
 
     fd_set udp_readfds;
-    fd_set udp_writefds;
+    //fd_set udp_writefds;
 
 
    // int fdmax;
@@ -1199,14 +1200,14 @@ int main(int argc, char *argv[])
     FD_ZERO(&original);
 
     //Initialize tcp sockets and also updates the process id (pid)
-    initialize_sockets(port, hostnames , tcp_readfds, original, tcp_receive_fd , pid);
+    initialize_sockets(port, hostnames , tcp_readfds, tcp_receive_fd , pid);
 
     FD_ZERO(&udp_writefds);    // clear the write and temp sets
     FD_ZERO(&udp_readfds);
 
 
     // Initialize UDP sockets
-    initialize_udp_sockets(port, hostnames , udp_readfds, original, udp_writefds, udp_receive_fd , pid);
+    initialize_udp_sockets(port, hostnames , udp_readfds, udp_receive_fd , pid);
 
     if (pid == 1){
         // This is the leader. Initialize the membership
@@ -1376,7 +1377,7 @@ int main(int argc, char *argv[])
 
                         //handle the message
 
-                        handle_messages(buf, typ ,original, udp_writefds, port, hostnames, pid, request_id);
+                        handle_messages(buf, typ, port, hostnames, pid, request_id);
 
                     }
                     else {
@@ -1398,7 +1399,7 @@ int main(int argc, char *argv[])
                             uint32_t typ;
                             memcpy(&typ, &buf, sizeof(uint32_t));
                             //handle the message
-                            handle_messages(buf, typ , original, udp_writefds, port, hostnames, pid, request_id);
+                            handle_messages(buf, typ , port, hostnames, pid, request_id);
 
                             //check the first few bytes and check the type of the message
                             /*
