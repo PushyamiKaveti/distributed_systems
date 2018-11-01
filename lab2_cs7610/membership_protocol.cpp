@@ -1567,8 +1567,8 @@ int main(int argc, char *argv[])
                                      if(pid < new_pid){
                                          cout<<"waiting for the failure\n";
                                          //it knows that cuttent process is supposed to be the leader. Just wait for getting info about current LEADER.
-                                          while(!new_leader_setup);
-                                         cout<<"waiting for the failure\n";
+                                         while(!new_leader_setup);
+                                         cout<<"done for the failure\n";
                                      }
                                      else{
                                          //the connection is not coming from expected leader.
