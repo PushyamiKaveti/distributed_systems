@@ -1142,10 +1142,6 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 view_id = b->newview_id;
                 membership_list.assign( b->member_list , b->member_list+ b->no_members);
 
-                //for (int i =0; i<membership_list.size(); i++){
-                //    cout<<membership_list.at(i)<<"\n";
-                //
-
             }
 
             break;
@@ -1202,7 +1198,6 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                // m{6, b->request_id, view_id, NOTHING, 0};
             }
 
-            multicast_mesgs( &m, tcp_writefds, 6);
             multicast_mesgs( &m, tcp_writefds, 6);
             break;
         }
@@ -1580,16 +1575,19 @@ int main(int argc, char *argv[])
                                          cout<<"done for the failure\n";
                                      }
                                      else{
+                                         cout<<"This is the reason for heartbeats going to tcp port\n";
                                          //the connection is not coming from expected leader.
                                          //This means the previous leader crashed before updating
                                          FD_ZERO(&original);
+                                         FD_SET(tcp_receive_fd, &original);
+                                         FD_SET(udp_receive_fd, &original);
                                          //This has extra work of connecting to new leader
                                          FD_ZERO(&tcp_writefds);
                                          FD_ZERO(&udp_writefds);
                                          int sock_lead = connect_to_new_member(their_addr, addr_len );
                                          int sock_lead_udp = connect_to_new_member_udp(their_addr, addr_len );
                                          FD_SET(sock_lead , &tcp_writefds);
-                                         FD_SET(sock_lead , &udp_writefds);
+                                         FD_SET(sock_lead_udp , &udp_writefds);
                                          LEADER = new_pid;
                                      }
 
