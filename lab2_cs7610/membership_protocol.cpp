@@ -580,6 +580,9 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty, int f=-1){
             }
         }
     }
+    if(f!= -1){
+        cout<<"leader failing\n";
+    }
 }
 
 void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
@@ -1727,10 +1730,12 @@ int main(int argc, char *argv[])
                                          request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
                                          //if leader failure is being simulated
                                          if(failure_at_process == new_pid){
+
                                              //find the socket of the process to which not to send the req
                                              int loss_proc_sock = pid_sock_tcpwrite_map.find(req_loss)->second;
 
                                              multicast_mesgs(&m , tcp_writefds, 1, loss_proc_sock);
+                                             return 0;
                                          }
                                          else
                                              multicast_mesgs(&m , tcp_writefds, 1);
