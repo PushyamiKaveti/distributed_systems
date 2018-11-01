@@ -72,11 +72,15 @@ bool new_leader_setup = false;
 int new_leader_setup_no_conns = 0;
 
 fd_set tcp_writefds, original, udp_writefds;
+int udp_receive_fd, tcp_receive_fd;
 
 int fdmax;
 vector <string> hostnames;
 char* port;
 
+uint32_t failure_at_process = 0;
+uint32_t req_loss = 0;
+int fail_op = 0;
 
 /***********************************************************************************************/
 //                               CONNECTION BASED STUFF                                        /
@@ -344,7 +348,8 @@ int connect_to_new_member_bypid(uint32_t new_pid, int proto){
     int rv, sock_fd;
 
     string host = hostnames.at((new_pid-1));
-
+    //cout<<"connecting to "<< host<<"\n";
+    //cout<<"on port "<<port<"\n";
     //for each hostname get addrssinfo
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
@@ -476,6 +481,7 @@ int connect_to_new_member(struct sockaddr_storage their_addr, socklen_t addr_len
     struct addrinfo hints, *servinfo, *p;
 
     getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
+    //cout<<"connecting to : ";
     //puts(remote_host);
 
     //*****************************************************************//
@@ -524,13 +530,13 @@ int connect_to_new_member(struct sockaddr_storage their_addr, socklen_t addr_len
 
 
 
-void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
+void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty, int f=-1){
     int s = 0;
     for (int i=0 ; i <=fdmax ;i++)
     {
-        if (FD_ISSET(i, &writefds))
+        // if the failure option is mentioned . then the leader process fails without sending the add request
+        if (FD_ISSET(i, &writefds) && i != f )
         {
-
             switch (ty){
                 case 1 :
                 {
@@ -560,10 +566,15 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
                     s = sizeof(NEWLEADER);
                     break;
                 }
+                case 6 :
+                {
+                    s= sizeof(NEWLEAD_RESP);
+                    break;
+                }
 
             }
-            if (ty != 4)
-                cout << "sent message of type : " << ty << "\n";
+            //if (ty != 4)
+            //    cout << "sent message of type : " << ty << "\n";
             if (send(i, m, s, 0) == -1) {
                 //perror("error in heartbeat message");
                 //ignoring heart beat failures.
@@ -571,6 +582,9 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
                     perror("sent message");
             }
         }
+    }
+    if(f!= -1){
+        cout<<"leader failing\n";
     }
 }
 
@@ -615,6 +629,16 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
             if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
                 FD_SET(i, &writefds);
         }
+
+        if(failure_at_process == remote_pid && fail_op == DEL){
+
+            //find the socket of the process to which not to send the req
+            int loss_proc_sock = pid_sock_tcpwrite_map.find(req_loss)->second;
+
+            multicast_mesgs(&m , tcp_writefds, 1, loss_proc_sock);
+            exit(0);
+        }
+        else
         // multicast the REquest message to the tempset
         multicast_mesgs(&m , writefds, 1);
         //increment the request id
@@ -669,13 +693,16 @@ void initiate_newleader_protocol( int pid){
     //TODO: On the other hand 1. the peers can start by connecting to the new leader in th similar way at the start, update the sockets with new leader
     //TODO: on the leader side, it gets new connections, accepts them and connects back to them, updates its tcwrites and reads. instead of sending REQ, it sends NEW LEADER
     //to remember the new leader setup is hapenning
-
+    int old_lead = LEADER;
+    int old_lead_ind = 0;
     //make the next available lowest PID process as LEADER
     int next_lead = MAX_PROCESSES+1;
     for(int i =0 ; i< membership_list.size(); i++){
         uint32_t cur = membership_list.at(i);
         if(cur < next_lead && cur != LEADER)
             next_lead = membership_list.at(i);
+        if(cur == LEADER)
+            old_lead_ind = i;
     }
     cout<<"NEXT LEADER  IS PROCESS : "<<next_lead<<"\n";
     //update the leader variable
@@ -684,8 +711,13 @@ void initiate_newleader_protocol( int pid){
     FD_ZERO(&tcp_writefds);
     FD_ZERO(&original);
 
+    FD_SET(tcp_receive_fd , &original);
+
+    pid_sock_udp_map.erase(pid_sock_udp_map.find(old_lead));
+    membership_list.erase(membership_list.begin()+old_lead_ind);
+    live_peer_map.erase(live_peer_map.find(old_lead));
     //check if the current process is the leader
-    if(pid != LEADER){
+    if(pid != LEADER) {
         //Already listening, and ha sto wait to received connections
         //connect to the new leader
         int lead_sock = connect_to_new_member_bypid(LEADER, TCP);
@@ -722,6 +754,7 @@ void timeout_thread(uint32_t remote_pid, bool& reset, int pid, uint32_t& request
                         cout<<"Initiating NEW LEADER PROTOCOL\n";
                         //to remember the new leader setup is hapenning
                         new_leader_setup = true;
+                        initiate_newleader_protocol(pid);
                         //Initiate the new leader protocol inside the main loop to keep everything
                         // synchronous in a single thread. Otherwise the main lopp there keeps hapenning
                     }
@@ -758,7 +791,7 @@ void periodic_timer_thread(bool& s)
 
     while(1) {
         this_thread::sleep_for(chrono::seconds(TIMEOUT));
-        cout<<"here\n";
+        //cout<<"here\n";
         s = true;
     }
 }
@@ -879,21 +912,37 @@ bool check_oks( uint32_t request_id, uint32_t oper_type){
     return false;
 
 }
-bool check_newlead_resps( uint32_t request_id){
+
+//
+bool check_newlead_resps( uint32_t request_id, uint32_t oper_type){
 
     int num_acks = newlead_resp_q.count(request_id);
     //cout<<"checking if all acks are received\n";
+    //check from all memebers except from the old leader(this is already deleted in initiateleaderprotocol) and itself( the new leader)
+    cout<<"checking newleaes responses: Num acks:"<<num_acks<<"\n";
+
     //check from all memebers except from the leader so -1
-    if (num_acks == (membership_list.size() -1)){
-        return true;
+    if(oper_type == ADD) {
+        if (num_acks == (membership_list.size() - 1))
+            return true;
     }
+        //check from all memebers except from the leader  and the member to be deleted so -2
+    else if (oper_type == DEL){
+        if (num_acks == (membership_list.size() - 2))
+            return true;
+    }
+    else{
+        cout<<"INVALID OPERTAION\n";
+        return false;
+    }
+
     return false;
 
 }
 
 void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id) {
 
-    printf(" Received message with type : \"%d  \"\n", ty);
+    //printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
         case 1: {
 
@@ -980,10 +1029,6 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 }
                 else if (pending_request.oper_type == DEL){
                     //deletion of the member operations
-                    //delete the req socket from the tcp writes and udp writes and original
-                    FD_CLR(req_sock, &tcp_writefds);
-                    FD_CLR(req_sock_read, &original);
-                    FD_CLR(req_sock_udp, &udp_writefds);
 
                     //remove the pid from the membership list
                     for (int i = 0; i < membership_list.size(); ++i) {
@@ -993,9 +1038,19 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                         }
                     }
 
-                    //leader deleted the socks from the sock id maps
-                    pid_sock_tcpread_map.erase(pid_sock_tcpread_map.find(req_pid));
-                    pid_sock_tcpwrite_map.erase(pid_sock_tcpwrite_map.find(req_pid));
+                    // This means it is a delete request after leader failing
+                    if(req_sock >= 0 &&req_sock_read >= 0 ){
+                        //delete the req socket from the tcp writes and udp writes and original
+                        FD_CLR(req_sock, &tcp_writefds);
+                        FD_CLR(req_sock_read, &original);
+
+                        //leader deleted the socks from the sock id maps
+                        pid_sock_tcpread_map.erase(pid_sock_tcpread_map.find(req_pid));
+                        pid_sock_tcpwrite_map.erase(pid_sock_tcpwrite_map.find(req_pid));
+                    }
+
+                    FD_CLR(req_sock_udp, &udp_writefds);
+
                     pid_sock_udp_map.erase(pid_sock_udp_map.find(req_pid));
 
                     cout<<"Removing peer "<<req_pid<<" from live peers\n";
@@ -1056,25 +1111,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                         cout<<membership_list.at(i)<<",";
                 }
                 cout<<"\n";
-               /* for (int i = 0; i < membership_list.size() ; i++){
-                    for (int j = 0; j < b->no_members ; j++){
-                        if(membership_list.at(i) == b->member_list[j]){
-                            found = true;
-                            break;
-                        }
-                    }
-                    // right now we are assumiong that views are added one by one and all the view messages reach in FIFO reliable order.
-                    //Hence there is a chance to find only one memeber del
-                    // if found is true then we found a match in b-> memebers and membership list.
-                    if(!found){
-                        //This is our guy
-                        req_pid = membership_list.at(i);
-                        //delete the member from list
-                        membership_list.erase(membership_list.begin()+i);
-                        break;
-                    }
 
-                }*/
                 //delete this memeber from all the datastructures
                 map<uint32_t, int>::iterator it = pid_sock_udp_map.find(req_pid);
                 if(it != pid_sock_udp_map.end())
@@ -1119,7 +1156,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
 
 
                             //pair consists of islive and reset bools
-                            cout<<"Adding peer "<<p<<" to live peers\n";
+                            //cout<<"Adding peer "<<p<<" to live peers\n";
                             pair<bool, bool> pair_l(true, false);
                             live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
                             thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second), pid, ref(request_id));
@@ -1137,10 +1174,6 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 view_id = b->newview_id;
                 membership_list.assign( b->member_list , b->member_list+ b->no_members);
 
-                //for (int i =0; i<membership_list.size(); i++){
-                //    cout<<membership_list.at(i)<<"\n";
-                //
-
             }
 
             break;
@@ -1152,7 +1185,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             //  else print unexpected behavior already time dout but received heart beat
             HEARTBEAT* b = (HEARTBEAT *) buf;
             map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(b->pid);
-            cout<<"Got HEARTBEAT FROM PEER "<<b->pid<<"\n";
+           // cout<<"Got HEARTBEAT FROM PEER "<<b->pid<<"\n"; //TEMP
             // if the pid of heartbeat message is present in live peer map
             if(it != live_peer_map.end())
             {
@@ -1178,6 +1211,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             NEWLEAD_RESP m;
             //if there is a pending request. that means this process has not received NEW VIEW message and leader crashed
             if(is_pending){
+                cout<<"There is a pending request\n";
                 m.type = 6;
                 m.request_id = b->request_id;
                 m.cur_view_id = view_id;
@@ -1187,6 +1221,13 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 //{6, b->request_id, view_id, pending_request.oper_type, pending_request.pid};
             }
             else{
+                cout<<"No pending request \n";
+                //requires membership update
+                cout<<"LEADER : "<<LEADER<<"\n";
+                for(int i = 0; i< membership_list.size(); i++){
+                    cout<<membership_list.at(i)<<",";
+                }
+                cout<<"\n";
                 m.type = 6;
                 m.request_id = b->request_id;
                 m.cur_view_id = view_id;
@@ -1195,7 +1236,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                // m{6, b->request_id, view_id, NOTHING, 0};
             }
 
-            multicast_mesgs( &m, tcp_writefds, 2);
+            multicast_mesgs( &m, tcp_writefds, 6);
             break;
         }
         case 6:{
@@ -1203,34 +1244,38 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             NEWLEAD_RESP* b = (NEWLEAD_RESP *)buf;
             // collect all the NEWLEAD_RESP s
             newlead_resp_q.insert(pair<uint32_t, NEWLEAD_RESP>(b->request_id, *b));
-            //check if received NEWLEADRESP from all processes. This is avoid senidng multiple REQUEST to each process.
-            if (check_newlead_resps(b->request_id)) {
-                // Assuming there is consistency in the type of operation among all the processes
-                uint32_t oper_type = NOTHING;
-                uint32_t req_pid = 0;
-                //get the oper type requested
-                pair<multimap<uint32_t, NEWLEAD_RESP>::iterator, multimap<uint32_t, NEWLEAD_RESP>::iterator> ret;
-                ret = newlead_resp_q.equal_range(b->request_id);
 
-                for (multimap<uint32_t, NEWLEAD_RESP>::iterator it = ret.first; it != ret.second; ++it) {
-                    NEWLEAD_RESP am = it->second;
-                    if( am.oper_type != NOTHING){
-                        oper_type = am.oper_type;
-                        req_pid = am.pid;
-                        cout<<"DEBUG: oper type: "<<oper_type<<"\n";
-                        cout<<"DEBUG: Requested process : "<<req_pid<<"\n";
-                    }
+            // Assuming there is consistency in the type of operation among all the processes
+            uint32_t oper_type = NOTHING;
+            uint32_t req_pid = 0;
+            //get the oper type requested
+            pair<multimap<uint32_t, NEWLEAD_RESP>::iterator, multimap<uint32_t, NEWLEAD_RESP>::iterator> ret;
+            ret = newlead_resp_q.equal_range(b->request_id);
+
+            for (multimap<uint32_t, NEWLEAD_RESP>::iterator it = ret.first; it != ret.second; ++it) {
+                NEWLEAD_RESP am = it->second;
+                if( am.oper_type != NOTHING){
+                    oper_type = am.oper_type;
+                    req_pid = am.pid;
+                    cout<<"DEBUG: oper type: "<<oper_type<<"\n";
+                    cout<<"DEBUG: Requested process : "<<req_pid<<"\n";
                 }
+            }
+
+            //check if received NEWLEADRESP from all processes. This is avoid senidng multiple REQUEST to each process.
+            if (check_newlead_resps(b->request_id,oper_type )) {
+                cout<<"entered here\n";
+
                 if(oper_type == ADD){
                     // First this new leader has to make a connection coz to be added peer wouldnt have known about this new leader if the old leader crashed wiothout upadting the view
                     int new_sock = connect_to_new_member_bypid(req_pid, TCP);
                     int new_sock_udp = connect_to_new_member_bypid(req_pid, UDP);
 
                     // if there are other members in the group send the Req to all those members
-                    REQ_MESG m {1, request_id, view_id, ADD, (uint32_t )req_pid};
+                    //REQ_MESG m {1, request_id, view_id, ADD, (uint32_t )req_pid};
                     //remember pending request in leader here as we are not sending REQ to itself.
-                    pending_request = m;
-                    is_pending = true;
+                    //pending_request = m;
+                    //is_pending = true;
                     //insert the request -> (pid, socket) mapping inside leader map.
                     pair<uint32_t, int> req_pair(req_pid, new_sock);
                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
@@ -1238,13 +1283,11 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     pair<uint32_t, int> req_pair_udp(req_pid, new_sock_udp);
                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
 
-                    multicast_mesgs(&m , tcp_writefds, 1);
-                    request_id ++;
+                   // multicast_mesgs(&m , tcp_writefds, 1);
+                    //request_id ++;
                 }
                 else if(oper_type == DEL){
 
-                    int tcp_sock = pid_sock_tcpwrite_map.find(req_pid)->second;
-                    int tcp_sock_read = pid_sock_tcpread_map.find(req_pid)->second;
                     int udp_sock = pid_sock_udp_map.find(req_pid)->second;
                     //create a new REquest message
                     REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, req_pid};
@@ -1253,30 +1296,30 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     is_pending = true;
 
                     //insert the request -> (pid, socket) mapping inside leader map.
-                    pair<uint32_t, int> req_pair(req_pid, tcp_sock);
+                    pair<uint32_t, int> req_pair(req_pid, -1);
                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
-                    pair<uint32_t, int> req_pair_read(req_pid, tcp_sock_read);
+                    pair<uint32_t, int> req_pair_read(req_pid, -1);
                     request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_read));
 
                     pair<uint32_t, int> req_pair_udp(req_pid, udp_sock);
                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
 
-                    //copy all the fds excpet for the one to be removed to a temp set
-                    fd_set writefds;
-                    FD_ZERO(&writefds);
-                    //remove the tcp socket from
-                    for(int i =0; i<=fdmax; i++){
-                        if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
-                            FD_SET(i, &writefds);
-                    }
                     // multicast the REquest message to the tempset
-                    multicast_mesgs(&m , writefds, 1);
+                    multicast_mesgs(&m , tcp_writefds, 1);
                     //increment the request id
                     request_id ++;
                 }
                 else if (oper_type == NOTHING){
+
                     cout<<"NO PENDING TASKS\n";
+                    //requires membership update
+                    cout<<"LEADER : "<<LEADER<<"\n";
+                    for(int i = 0; i< membership_list.size(); i++){
+                        cout<<membership_list.at(i)<<",";
+                    }
+                    cout<<"\n";
+
                 }
                 else{
                     cout<<"ERROR: invalid OPeration type\n";
@@ -1405,10 +1448,9 @@ int main(int argc, char *argv[])
     bool simulate_loss=false;
     char* lossfile;
 
-
     bool args_provided = false;
 
-    while ((cmd_arg = getopt (argc, argv, "p:h:")) != -1){
+    while ((cmd_arg = getopt (argc, argv, "p:h:f:l:o:")) != -1){
         args_provided=true;
         switch (cmd_arg)
         {
@@ -1424,7 +1466,21 @@ int main(int argc, char *argv[])
                 hostfile = optarg;
                 break;
             }
-
+            case 'f':
+            {
+                failure_at_process = (uint32_t)atoi(optarg);
+                break;
+            }
+            case 'l':
+            {
+                req_loss = (uint32_t)atoi(optarg);
+                break;
+            }
+            case 'o':
+            {
+                fail_op = (uint32_t)atoi(optarg);
+                break;
+            }
             case '?':
                 if (optopt == 'c' || optopt == 'p'||optopt == 'h')
                     fprintf (stderr, "Option -%c requires an argument.\n", optopt);
@@ -1462,7 +1518,8 @@ int main(int argc, char *argv[])
 
    // int fdmax;
     uint32_t pid;
-    int udp_receive_fd, sock_fd, tcp_receive_fd;
+    //int udp_receive_fd, sock_fd, tcp_receive_fd;
+    int sock_fd;
     char s[INET6_ADDRSTRLEN];
     char s_tmp[INET6_ADDRSTRLEN];
     int rv;
@@ -1524,10 +1581,9 @@ int main(int argc, char *argv[])
     {
 
         //LEADER CRASHED AND NEW LEADER PROTOCOL NEEDS T BE INITIATED
-        if(new_leader_setup){
-            initiate_newleader_protocol(pid);
-        }
-
+       // if(new_leader_setup){
+       //     initiate_newleader_protocol(pid);
+       // }
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
 
@@ -1557,23 +1613,36 @@ int main(int argc, char *argv[])
                              //get the name of the new peer
                              getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
                              //if the current ;process is not the leader it is expected to receuved connection from leader
+                             //edge case PID is supposed to be the leader, but it doesnt know it yet.
                              if(pid != LEADER){
                                  cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                  // look up the hostnames to get the pid of the peer
                                  int new_pid = get_pidofhost( remote_host);
                                  cout<<"\n host PID is :"<<new_pid<<"\n";
                                  if(new_pid != LEADER){
-                                     //the connection is not coming from expected leader.
-                                     //This means the previous leader crashed before updating
-                                     FD_ZERO(&original);
-                                     //This has extra work of connecting to new leader
-                                     FD_ZERO(&tcp_writefds);
-                                     FD_ZERO(&udp_writefds);
-                                     int sock_lead = connect_to_new_member(their_addr, addr_len );
-                                     int sock_lead_udp = connect_to_new_member_udp(their_addr, addr_len );
-                                     FD_SET(sock_lead , &tcp_writefds);
-                                     FD_SET(sock_lead , &udp_writefds);
-                                     LEADER = new_pid;
+                                     if(pid < new_pid){
+                                         cout<<"waiting for the failure\n";
+                                         //it knows that cuttent process is supposed to be the leader. Just wait for getting info about current LEADER.
+                                         while(!new_leader_setup);
+                                         cout<<"done for the failure\n";
+                                     }
+                                     else{
+                                         cout<<"THIS IS THE REASON FOR HEARTBEATS GOING TO TCP PORT\n";
+                                         //the connection is not coming from expected leader.
+                                         //This means the previous leader crashed before updating
+                                         FD_ZERO(&original);
+                                         FD_SET(tcp_receive_fd, &original);
+
+                                         //This has extra work of connecting to new leader
+                                         FD_ZERO(&tcp_writefds);
+                                         FD_ZERO(&udp_writefds);
+                                         int sock_lead = connect_to_new_member(their_addr, addr_len );
+                                         int sock_lead_udp = connect_to_new_member_udp(their_addr, addr_len );
+                                         FD_SET(sock_lead , &tcp_writefds);
+                                         FD_SET(sock_lead_udp , &udp_writefds);
+                                         LEADER = new_pid;
+                                     }
+
                                  }
 
                              }
@@ -1590,7 +1659,7 @@ int main(int argc, char *argv[])
                                  // if current process is the leader
                                  if(pid == LEADER){
                                      // connect to the new member via tcp and get socket
-                                     new_sock = connect_to_new_member(their_addr, addr_len );
+                                     //new_sock = connect_to_new_member(their_addr, addr_len );
                                      cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                      // look up the hostnames to get the pid of the peer
                                      int new_pid = get_pidofhost( remote_host);
@@ -1599,6 +1668,7 @@ int main(int argc, char *argv[])
                                          cout<<"Unknown peer trying to connect\n";
                                          continue;
                                      }
+                                     new_sock = connect_to_new_member_bypid(new_pid, TCP);
                                      //usually when the leader starts up the new connection is added only when the view is changed.
                                      //But heree=, since this is new leader and all the peers are already added we add the new socket to
                                      //the socket set so that when we receive a;ll the connections from live peers we can sedn NEWLEADER
@@ -1650,21 +1720,26 @@ int main(int argc, char *argv[])
                                          cout<<"Unknown peer trying to connect\n";
                                          continue;
                                      }
+
                                      //if the pending request is for same process as the one trying to connect. This means this process ia already pipelined to be added. do nothing
                                      // This is a special case which happens when the leader fails and previous pending request is being executed
-                                     if(is_pending && pending_request.pid == new_pid){
+                                     //if(is_pending && pending_request.pid == new_pid){
 
-                                         pair<uint32_t, int> req_pair_read(new_pid, sock_fd);
-                                         request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (pending_request.request_id, req_pair_read));
-                                         continue;
+                                     //    pair<uint32_t, int> req_pair_read(new_pid, sock_fd);
+                                     //    request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (pending_request.request_id, req_pair_read));
+                                     //    continue;
+                                     //}
+
+                                     // check if the member is a;ready connected. This happens when there is a pending request from leader failure
+                                     if(request_map_tcpwrite.find(request_id) == request_map_tcpwrite.end() && request_map_udp.find(request_id) == request_map_udp.end()){
+                                         cout<<"Pending member addition\n";
+                                         // connect to the new member to sent messages and get the socket.
+                                         new_sock = connect_to_new_member(their_addr, addr_len );
+
+                                         // connect to the new member VIA UDP to send HEARTBEATS and get the socket.
+                                         new_sock_udp = connect_to_new_member_udp(their_addr, addr_len );
                                      }
 
-
-                                     // connect to the new member to sent messages and get the socket.
-                                     new_sock = connect_to_new_member(their_addr, addr_len );
-
-                                     // connect to the new member VIA UDP to send HEARTBEATS and get the socket.
-                                     new_sock_udp = connect_to_new_member_udp(their_addr, addr_len );
 
 
 
@@ -1688,8 +1763,17 @@ int main(int argc, char *argv[])
 
                                          pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
                                          request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
+                                         //if leader failure is being simulated
+                                         if(failure_at_process == new_pid && fail_op == ADD){
 
-                                         multicast_mesgs(&m , tcp_writefds, 1);
+                                             //find the socket of the process to which not to send the req
+                                             int loss_proc_sock = pid_sock_tcpwrite_map.find(req_loss)->second;
+
+                                             multicast_mesgs(&m , tcp_writefds, 1, loss_proc_sock);
+                                             return 0;
+                                         }
+                                         else
+                                             multicast_mesgs(&m , tcp_writefds, 1);
                                          request_id ++;
                                      }
                                      else{
@@ -1735,31 +1819,9 @@ int main(int argc, char *argv[])
                              }
 
 
-
                         }
 
                     }
-                    /*else if (i == udp_receive_fd){
-                        // received message
-                        addr_len = sizeof their_addr;
-                        if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
-                            perror("recvfrom");
-                            exit(1);
-                        }
-
-                        //printf("got packet from %s", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
-
-                        buf[numbytes] = '\0';
-                        //check the first few bytes and check the type of the message
-                        uint32_t typ;
-                        memcpy(&typ, &buf, sizeof(uint32_t));
-                        //This must be heartbeat message
-
-                        //handle the message
-
-                        handle_messages(buf, typ, pid, request_id);
-
-                    }*/
                     else {
                         // receiving in any other sockets means it is getting messages from peers (here it is just the leader for membership protocol) connected to this
                         // handle data from a remote host
