@@ -900,9 +900,9 @@ bool check_newlead_resps( uint32_t request_id){
 
     int num_acks = newlead_resp_q.count(request_id);
     //cout<<"checking if all acks are received\n";
-    //check from all memebers except from the old leader abd itself( the new leader)
+    //check from all memebers except from the old leader(this is already deleted in initiateleaderprotocol) and itself( the new leader)
     cout<<"checking newleas responses:Num acks:"<<num_acks<<"\n";
-    if (num_acks == (membership_list.size() -2)){
+    if (num_acks == (membership_list.size() -1)){
         return true;
     }
     return false;
