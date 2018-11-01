@@ -1420,7 +1420,7 @@ int main(int argc, char *argv[])
 
     bool args_provided = false;
 
-    while ((cmd_arg = getopt (argc, argv, "p:h:")) != -1){
+    while ((cmd_arg = getopt (argc, argv, "p:h:f:")) != -1){
         args_provided=true;
         switch (cmd_arg)
         {
@@ -1438,7 +1438,7 @@ int main(int argc, char *argv[])
             }
             case 'f':
             {
-                failure_at_process = (uinte32_t)atoi(optarg);
+                failure_at_process = (uint32_t)atoi(optarg);
                 break;
             }
             case '?':
