@@ -889,8 +889,8 @@ bool check_newlead_resps( uint32_t request_id){
 
     int num_acks = newlead_resp_q.count(request_id);
     //cout<<"checking if all acks are received\n";
-    //check from all memebers except from the leader so -1
-    if (num_acks == (membership_list.size() -1)){
+    //check from all memebers except from the old leader abd itself( the new leader)
+    if (num_acks == (membership_list.size() -2)){
         return true;
     }
     return false;
@@ -1183,6 +1183,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             NEWLEAD_RESP m;
             //if there is a pending request. that means this process has not received NEW VIEW message and leader crashed
             if(is_pending){
+                cout<<"There is a pending request\n";
                 m.type = 6;
                 m.request_id = b->request_id;
                 m.cur_view_id = view_id;
@@ -1192,6 +1193,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 //{6, b->request_id, view_id, pending_request.oper_type, pending_request.pid};
             }
             else{
+                cout<<"No pending request \n";
                 m.type = 6;
                 m.request_id = b->request_id;
                 m.cur_view_id = view_id;
@@ -1200,7 +1202,8 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                // m{6, b->request_id, view_id, NOTHING, 0};
             }
 
-            multicast_mesgs( &m, tcp_writefds, 2);
+            multicast_mesgs( &m, tcp_writefds, 6);
+            multicast_mesgs( &m, tcp_writefds, 6);
             break;
         }
         case 6:{
