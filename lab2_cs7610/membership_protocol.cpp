@@ -563,6 +563,11 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
                     s = sizeof(NEWLEADER);
                     break;
                 }
+                case 6 :
+                {
+                    s= sizeof(NEWLEAD_RESP);
+                    break;
+                }
 
             }
             if (ty != 4)
@@ -1061,25 +1066,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                         cout<<membership_list.at(i)<<",";
                 }
                 cout<<"\n";
-               /* for (int i = 0; i < membership_list.size() ; i++){
-                    for (int j = 0; j < b->no_members ; j++){
-                        if(membership_list.at(i) == b->member_list[j]){
-                            found = true;
-                            break;
-                        }
-                    }
-                    // right now we are assumiong that views are added one by one and all the view messages reach in FIFO reliable order.
-                    //Hence there is a chance to find only one memeber del
-                    // if found is true then we found a match in b-> memebers and membership list.
-                    if(!found){
-                        //This is our guy
-                        req_pid = membership_list.at(i);
-                        //delete the member from list
-                        membership_list.erase(membership_list.begin()+i);
-                        break;
-                    }
 
-                }*/
                 //delete this memeber from all the datastructures
                 map<uint32_t, int>::iterator it = pid_sock_udp_map.find(req_pid);
                 if(it != pid_sock_udp_map.end())
