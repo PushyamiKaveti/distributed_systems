@@ -1234,10 +1234,10 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     int new_sock_udp = connect_to_new_member_bypid(req_pid, UDP);
 
                     // if there are other members in the group send the Req to all those members
-                    REQ_MESG m {1, request_id, view_id, ADD, (uint32_t )req_pid};
+                    //REQ_MESG m {1, request_id, view_id, ADD, (uint32_t )req_pid};
                     //remember pending request in leader here as we are not sending REQ to itself.
-                    pending_request = m;
-                    is_pending = true;
+                    //pending_request = m;
+                    //is_pending = true;
                     //insert the request -> (pid, socket) mapping inside leader map.
                     pair<uint32_t, int> req_pair(req_pid, new_sock);
                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
@@ -1245,8 +1245,8 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     pair<uint32_t, int> req_pair_udp(req_pid, new_sock_udp);
                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
 
-                    multicast_mesgs(&m , tcp_writefds, 1);
-                    request_id ++;
+                   // multicast_mesgs(&m , tcp_writefds, 1);
+                    //request_id ++;
                 }
                 else if(oper_type == DEL){
 
@@ -1690,21 +1690,25 @@ int main(int argc, char *argv[])
                                          cout<<"Unknown peer trying to connect\n";
                                          continue;
                                      }
+
                                      //if the pending request is for same process as the one trying to connect. This means this process ia already pipelined to be added. do nothing
                                      // This is a special case which happens when the leader fails and previous pending request is being executed
-                                     if(is_pending && pending_request.pid == new_pid){
+                                     //if(is_pending && pending_request.pid == new_pid){
 
-                                         pair<uint32_t, int> req_pair_read(new_pid, sock_fd);
-                                         request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (pending_request.request_id, req_pair_read));
-                                         continue;
+                                     //    pair<uint32_t, int> req_pair_read(new_pid, sock_fd);
+                                     //    request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (pending_request.request_id, req_pair_read));
+                                     //    continue;
+                                     //}
+
+                                     // check if the member is a;ready connected. This happens when there is a pending request from leader failure
+                                     if(request_map_tcpwrite.find(request_id) != request_map_tcpwrite.end() && request_map_udp.find(request_id) != request_map_udp.end()){
+                                         // connect to the new member to sent messages and get the socket.
+                                         new_sock = connect_to_new_member(their_addr, addr_len );
+
+                                         // connect to the new member VIA UDP to send HEARTBEATS and get the socket.
+                                         new_sock_udp = connect_to_new_member_udp(their_addr, addr_len );
                                      }
 
-
-                                     // connect to the new member to sent messages and get the socket.
-                                     new_sock = connect_to_new_member(their_addr, addr_len );
-
-                                     // connect to the new member VIA UDP to send HEARTBEATS and get the socket.
-                                     new_sock_udp = connect_to_new_member_udp(their_addr, addr_len );
 
 
 
