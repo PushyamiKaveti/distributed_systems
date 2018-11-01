@@ -1565,6 +1565,7 @@ int main(int argc, char *argv[])
                                  cout<<"\n host PID is :"<<new_pid<<"\n";
                                  if(new_pid != LEADER){
                                      if(pid < new_pid){
+                                         cout<<"waiting for the failure\n";
                                          //it knows that cuttent process is supposed to be the leader. Just wait for getting info about current LEADER.
                                           while(!new_leader_setup);
                                      }
