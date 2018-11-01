@@ -531,6 +531,7 @@ void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty, int f=-1){
     int s = 0;
     for (int i=0 ; i <=fdmax ;i++)
     {
+        // if the failure option is mentioned . then the leader process fails without sending the add request
         if (FD_ISSET(i, &writefds) && i != f )
         {
             switch (ty){
@@ -1416,11 +1417,12 @@ int main(int argc, char *argv[])
     bool simulate_loss=false;
     char* lossfile;
     uint32_t failure_at_process = 0;
+    uint32_t req_loss = 0;
 
 
     bool args_provided = false;
 
-    while ((cmd_arg = getopt (argc, argv, "p:h:f:")) != -1){
+    while ((cmd_arg = getopt (argc, argv, "p:h:f:l:")) != -1){
         args_provided=true;
         switch (cmd_arg)
         {
@@ -1439,6 +1441,11 @@ int main(int argc, char *argv[])
             case 'f':
             {
                 failure_at_process = (uint32_t)atoi(optarg);
+                break;
+            }
+            case 'l':
+            {
+                req_loss = (uint32_t)atoi(optarg);
                 break;
             }
             case '?':
@@ -1719,10 +1726,11 @@ int main(int argc, char *argv[])
                                          pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
                                          request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
                                          //if leader failure is being simulated
-                                         if(failure_at_process !=0){
-                                             int fail_proc_sock = pid_sock_tcpwrite_map.find(failure_at_process)->second;
+                                         if(failure_at_process == new_pid){
+                                             //find the socket of the process to which not to send the req
+                                             int loss_proc_sock = pid_sock_tcpwrite_map.find(req_loss)->second;
 
-                                             multicast_mesgs(&m , tcp_writefds, 1, fail_proc_sock);
+                                             multicast_mesgs(&m , tcp_writefds, 1, loss_proc_sock);
                                          }
                                          else
                                              multicast_mesgs(&m , tcp_writefds, 1);
