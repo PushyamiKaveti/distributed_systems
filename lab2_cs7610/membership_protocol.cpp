@@ -640,7 +640,7 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
         }
         else
         // multicast the REquest message to the tempset
-        multicast_mesgs(&m , writefds, 1, );
+        multicast_mesgs(&m , writefds, 1);
         //increment the request id
         request_id ++;
     }
