@@ -669,7 +669,7 @@ void initiate_newleader_protocol( int pid){
     //TODO: On the other hand 1. the peers can start by connecting to the new leader in th similar way at the start, update the sockets with new leader
     //TODO: on the leader side, it gets new connections, accepts them and connects back to them, updates its tcwrites and reads. instead of sending REQ, it sends NEW LEADER
     //to remember the new leader setup is hapenning
-
+    uint32_t old_lead = LEADER;
     //make the next available lowest PID process as LEADER
     int next_lead = MAX_PROCESSES+1;
     for(int i =0 ; i< membership_list.size(); i++){
@@ -685,12 +685,45 @@ void initiate_newleader_protocol( int pid){
     FD_ZERO(&original);
 
     //check if the current process is the leader
-    if(pid != LEADER){
+    /*if(pid != LEADER){
         //Already listening, and ha sto wait to received connections
         //connect to the new leader
         int lead_sock = connect_to_new_member_bypid(LEADER, TCP);
         FD_SET(lead_sock, &tcp_writefds);
         new_leader_setup = false;
+    } */
+
+    //check if the current process is the leader then start connecting with other members in the live peers list
+
+    if(pid == LEADER){
+        for( int i =0; membership_list.size(); i++){
+            uint32_t cur = membership_list.at(i);
+            //connect to all members other than current lead and old lead
+            if(cur != LEADER && cur != old_lead){
+                //sanity check that this memeber has not died
+                map<uint32_t , pair<bool,bool> > ::iterator it = live_peer_map.find(cur);
+                if(it != live_peer_map.end()){
+                    if(!it->second.first)
+                        cout<<"process :"<<cur<<" died in the middle of new leader setup\n";
+                    else{
+                        int new_sock = connect_to_new_member_bypid(cur, TCP);
+                        //usually when the leader starts up the new connection is added only when the view is changed.
+                        //But heree=, since this is new leader and all the peers are already added we add the new socket to
+                        //the socket set so that when we receive a;ll the connections from live peers we can sedn NEWLEADER
+                        FD_SET(new_sock, &tcp_writefds);
+
+                        //new leader also should reflect the state of the live peers which are connected
+                        //leader adds the member pid and sock maps for both tcp and udp connections for the new members
+                        // I dont yet have read socket. it come when the peer accept the connection
+                        pid_sock_tcpwrite_map.insert(pair<uint32_t, int>(new_pid, new_sock));
+                    }
+                }
+                else{
+                    cout<<"The member is not present in live peer map. This hsouldnt happen\n";
+                }
+            }
+        }
+
     }
 
 
@@ -722,7 +755,7 @@ void timeout_thread(uint32_t remote_pid, bool& reset, int pid, uint32_t& request
                         cout<<"Initiating NEW LEADER PROTOCOL\n";
                         //to remember the new leader setup is hapenning
                         new_leader_setup = true;
-                        initiate_newleader_protocol(pid);
+                        //initiate_newleader_protocol(pid);
                         //Initiate the new leader protocol inside the main loop to keep everything
                         // synchronous in a single thread. Otherwise the main lopp there keeps hapenning
                     }
@@ -1056,25 +1089,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                         cout<<membership_list.at(i)<<",";
                 }
                 cout<<"\n";
-               /* for (int i = 0; i < membership_list.size() ; i++){
-                    for (int j = 0; j < b->no_members ; j++){
-                        if(membership_list.at(i) == b->member_list[j]){
-                            found = true;
-                            break;
-                        }
-                    }
-                    // right now we are assumiong that views are added one by one and all the view messages reach in FIFO reliable order.
-                    //Hence there is a chance to find only one memeber del
-                    // if found is true then we found a match in b-> memebers and membership list.
-                    if(!found){
-                        //This is our guy
-                        req_pid = membership_list.at(i);
-                        //delete the member from list
-                        membership_list.erase(membership_list.begin()+i);
-                        break;
-                    }
 
-                }*/
                 //delete this memeber from all the datastructures
                 map<uint32_t, int>::iterator it = pid_sock_udp_map.find(req_pid);
                 if(it != pid_sock_udp_map.end())
@@ -1524,9 +1539,9 @@ int main(int argc, char *argv[])
     {
 
         //LEADER CRASHED AND NEW LEADER PROTOCOL NEEDS T BE INITIATED
-        //if(new_leader_setup){
-       //     initiate_newleader_protocol(pid);
-       // }
+        if(new_leader_setup){
+            initiate_newleader_protocol(pid);
+        }
 
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
@@ -1557,11 +1572,13 @@ int main(int argc, char *argv[])
                              //get the name of the new peer
                              getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
                              //if the current ;process is not the leader it is expected to receuved connection from leader
+                             //This can be old leader or new leader. diferentiate
                              if(pid != LEADER){
                                  cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                  // look up the hostnames to get the pid of the peer
                                  int new_pid = get_pidofhost( remote_host);
                                  cout<<"\n host PID is :"<<new_pid<<"\n";
+                                 // this means it is the new leader
                                  if(new_pid != LEADER){
                                      //the connection is not coming from expected leader.
                                      //This means the previous leader crashed before updating
