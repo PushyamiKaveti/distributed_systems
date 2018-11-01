@@ -690,7 +690,7 @@ void initiate_newleader_protocol( int pid){
     FD_SET(tcp_receive_fd , &original);
     FD_SET(udp_receive_fd , &original);
     //check if the current process is the leader
-    if(pid == LEADER) {
+    if(pid != LEADER) {
         //Already listening, and ha sto wait to received connections
         //connect to the new leader
         int lead_sock = connect_to_new_member_bypid(LEADER, TCP);
