@@ -897,10 +897,11 @@ bool check_oks( uint32_t request_id, uint32_t oper_type){
 
 }
 bool check_newlead_resps( uint32_t request_id){
-    cout<<"checking newleas responses\n";
+
     int num_acks = newlead_resp_q.count(request_id);
     //cout<<"checking if all acks are received\n";
     //check from all memebers except from the old leader abd itself( the new leader)
+    cout<<"checking newleas responses:Num acks:"<<num_acks<<"\n";
     if (num_acks == (membership_list.size() -2)){
         return true;
     }
