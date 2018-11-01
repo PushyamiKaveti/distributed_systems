@@ -1531,7 +1531,6 @@ int main(int argc, char *argv[])
        // if(new_leader_setup){
        //     initiate_newleader_protocol(pid);
        // }
-
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
 
@@ -1753,31 +1752,9 @@ int main(int argc, char *argv[])
                              }
 
 
-
                         }
 
                     }
-                    /*else if (i == udp_receive_fd){
-                        // received message
-                        addr_len = sizeof their_addr;
-                        if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
-                            perror("recvfrom");
-                            exit(1);
-                        }
-
-                        //printf("got packet from %s", inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s));
-
-                        buf[numbytes] = '\0';
-                        //check the first few bytes and check the type of the message
-                        uint32_t typ;
-                        memcpy(&typ, &buf, sizeof(uint32_t));
-                        //This must be heartbeat message
-
-                        //handle the message
-
-                        handle_messages(buf, typ, pid, request_id);
-
-                    }*/
                     else {
                         // receiving in any other sockets means it is getting messages from peers (here it is just the leader for membership protocol) connected to this
                         // handle data from a remote host
