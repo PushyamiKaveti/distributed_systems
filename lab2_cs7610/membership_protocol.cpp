@@ -1556,23 +1556,31 @@ int main(int argc, char *argv[])
                              //get the name of the new peer
                              getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
                              //if the current ;process is not the leader it is expected to receuved connection from leader
+                             //edge case PID is supposed to be the leader, but it doesnt know it yet.
                              if(pid != LEADER){
                                  cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                  // look up the hostnames to get the pid of the peer
                                  int new_pid = get_pidofhost( remote_host);
                                  cout<<"\n host PID is :"<<new_pid<<"\n";
                                  if(new_pid != LEADER){
-                                     //the connection is not coming from expected leader.
-                                     //This means the previous leader crashed before updating
-                                     FD_ZERO(&original);
-                                     //This has extra work of connecting to new leader
-                                     FD_ZERO(&tcp_writefds);
-                                     FD_ZERO(&udp_writefds);
-                                     int sock_lead = connect_to_new_member(their_addr, addr_len );
-                                     int sock_lead_udp = connect_to_new_member_udp(their_addr, addr_len );
-                                     FD_SET(sock_lead , &tcp_writefds);
-                                     FD_SET(sock_lead , &udp_writefds);
-                                     LEADER = new_pid;
+                                     if(pid < new_pid){
+                                         //it knows that cuttent process is supposed to be the leader. Just wait for getting info about current LEADER.
+                                          while(!new_leader_setup);
+                                     }
+                                     else{
+                                         //the connection is not coming from expected leader.
+                                         //This means the previous leader crashed before updating
+                                         FD_ZERO(&original);
+                                         //This has extra work of connecting to new leader
+                                         FD_ZERO(&tcp_writefds);
+                                         FD_ZERO(&udp_writefds);
+                                         int sock_lead = connect_to_new_member(their_addr, addr_len );
+                                         int sock_lead_udp = connect_to_new_member_udp(their_addr, addr_len );
+                                         FD_SET(sock_lead , &tcp_writefds);
+                                         FD_SET(sock_lead , &udp_writefds);
+                                         LEADER = new_pid;
+                                     }
+
                                  }
 
                              }
