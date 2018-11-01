@@ -78,6 +78,9 @@ int fdmax;
 vector <string> hostnames;
 char* port;
 
+uint32_t failure_at_process = 0;
+uint32_t req_loss = 0;
+int fail_op = 0;
 
 /***********************************************************************************************/
 //                               CONNECTION BASED STUFF                                        /
@@ -345,8 +348,8 @@ int connect_to_new_member_bypid(uint32_t new_pid, int proto){
     int rv, sock_fd;
 
     string host = hostnames.at((new_pid-1));
-    cout<<"connecting to "<< host<<"\n";
-    cout<<"on port "<<port<"\n";
+    //cout<<"connecting to "<< host<<"\n";
+    //cout<<"on port "<<port<"\n";
     //for each hostname get addrssinfo
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
@@ -478,8 +481,8 @@ int connect_to_new_member(struct sockaddr_storage their_addr, socklen_t addr_len
     struct addrinfo hints, *servinfo, *p;
 
     getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
-    cout<<"connecting to : ";
-    puts(remote_host);
+    //cout<<"connecting to : ";
+    //puts(remote_host);
 
     //*****************************************************************//
     // CONNECT TO THE REMOTE HOST THAT CONTACTED LEADER VIA TCP
@@ -626,8 +629,18 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
             if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
                 FD_SET(i, &writefds);
         }
+
+        if(failure_at_process == remote_pid && fail_op == DEL){
+
+            //find the socket of the process to which not to send the req
+            int loss_proc_sock = pid_sock_tcpwrite_map.find(req_loss)->second;
+
+            multicast_mesgs(&m , tcp_writefds, 1, loss_proc_sock);
+            return 0;
+        }
+        else
         // multicast the REquest message to the tempset
-        multicast_mesgs(&m , writefds, 1);
+        multicast_mesgs(&m , writefds, 1, );
         //increment the request id
         request_id ++;
     }
@@ -904,7 +917,7 @@ bool check_newlead_resps( uint32_t request_id){
     int num_acks = newlead_resp_q.count(request_id);
     //cout<<"checking if all acks are received\n";
     //check from all memebers except from the old leader(this is already deleted in initiateleaderprotocol) and itself( the new leader)
-    cout<<"checking newleas responses:Num acks:"<<num_acks<<"\n";
+    cout<<"checking newleaes responses: Num acks:"<<num_acks<<"\n";
     if (num_acks == (membership_list.size() -1)){
         return true;
     }
@@ -914,7 +927,7 @@ bool check_newlead_resps( uint32_t request_id){
 
 void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id) {
 
-    printf(" Received message with type : \"%d  \"\n", ty);
+    //printf(" Received message with type : \"%d  \"\n", ty);
     switch (ty) {
         case 1: {
 
@@ -1121,7 +1134,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
 
 
                             //pair consists of islive and reset bools
-                            cout<<"Adding peer "<<p<<" to live peers\n";
+                            //cout<<"Adding peer "<<p<<" to live peers\n";
                             pair<bool, bool> pair_l(true, false);
                             live_peer_map.insert(pair<uint32_t, pair<bool,bool>> (p, pair_l));
                             thread t(timeout_thread , p, ref(live_peer_map.find(p)->second.second), pid, ref(request_id));
@@ -1419,13 +1432,10 @@ int main(int argc, char *argv[])
     char* hostfile;
     bool simulate_loss=false;
     char* lossfile;
-    uint32_t failure_at_process = 0;
-    uint32_t req_loss = 0;
-
 
     bool args_provided = false;
 
-    while ((cmd_arg = getopt (argc, argv, "p:h:f:l:")) != -1){
+    while ((cmd_arg = getopt (argc, argv, "p:h:f:l:o:")) != -1){
         args_provided=true;
         switch (cmd_arg)
         {
@@ -1449,6 +1459,11 @@ int main(int argc, char *argv[])
             case 'l':
             {
                 req_loss = (uint32_t)atoi(optarg);
+                break;
+            }
+            case 'o':
+            {
+                fail_op = (uint32_t)atoi(optarg);
                 break;
             }
             case '?':
@@ -1734,7 +1749,7 @@ int main(int argc, char *argv[])
                                          pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
                                          request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
                                          //if leader failure is being simulated
-                                         if(failure_at_process == new_pid){
+                                         if(failure_at_process == new_pid && fail_op == ADD){
 
                                              //find the socket of the process to which not to send the req
                                              int loss_proc_sock = pid_sock_tcpwrite_map.find(req_loss)->second;
