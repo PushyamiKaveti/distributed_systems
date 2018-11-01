@@ -1184,6 +1184,12 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             }
             else{
                 cout<<"No pending request \n";
+                //requires membership update
+                cout<<"LEADER : "<<LEADER<<"\n";
+                for(int i = 0; i< membership_list.size(); i++){
+                    cout<<membership_list.at(i)<<",";
+                }
+                cout<<"\n";
                 m.type = 6;
                 m.request_id = b->request_id;
                 m.cur_view_id = view_id;
