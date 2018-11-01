@@ -1702,6 +1702,7 @@ int main(int argc, char *argv[])
 
                                      // check if the member is a;ready connected. This happens when there is a pending request from leader failure
                                      if(request_map_tcpwrite.find(request_id) != request_map_tcpwrite.end() && request_map_udp.find(request_id) != request_map_udp.end()){
+                                         cout<<"Pending member addition\n";
                                          // connect to the new member to sent messages and get the socket.
                                          new_sock = connect_to_new_member(their_addr, addr_len );
 
