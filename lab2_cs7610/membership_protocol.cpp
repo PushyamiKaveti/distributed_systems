@@ -912,15 +912,30 @@ bool check_oks( uint32_t request_id, uint32_t oper_type){
     return false;
 
 }
-bool check_newlead_resps( uint32_t request_id){
+
+//
+bool check_newlead_resps( uint32_t request_id, uint32_t oper_type){
 
     int num_acks = newlead_resp_q.count(request_id);
     //cout<<"checking if all acks are received\n";
     //check from all memebers except from the old leader(this is already deleted in initiateleaderprotocol) and itself( the new leader)
     cout<<"checking newleaes responses: Num acks:"<<num_acks<<"\n";
-    if (num_acks == (membership_list.size() -1)){
-        return true;
+
+    //check from all memebers except from the leader so -1
+    if(oper_type == ADD) {
+        if (num_acks == (membership_list.size() - 1))
+            return true;
     }
+        //check from all memebers except from the leader  and the member to be deleted so -2
+    else if (oper_type == DEL){
+        if (num_acks == (membership_list.size() - 2))
+            return true;
+    }
+    else{
+        cout<<"INVALID OPERTAION\n";
+        return false;
+    }
+
     return false;
 
 }
@@ -1222,25 +1237,28 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             NEWLEAD_RESP* b = (NEWLEAD_RESP *)buf;
             // collect all the NEWLEAD_RESP s
             newlead_resp_q.insert(pair<uint32_t, NEWLEAD_RESP>(b->request_id, *b));
-            //check if received NEWLEADRESP from all processes. This is avoid senidng multiple REQUEST to each process.
-            if (check_newlead_resps(b->request_id)) {
-                cout<<"entered here\n";
-                // Assuming there is consistency in the type of operation among all the processes
-                uint32_t oper_type = NOTHING;
-                uint32_t req_pid = 0;
-                //get the oper type requested
-                pair<multimap<uint32_t, NEWLEAD_RESP>::iterator, multimap<uint32_t, NEWLEAD_RESP>::iterator> ret;
-                ret = newlead_resp_q.equal_range(b->request_id);
 
-                for (multimap<uint32_t, NEWLEAD_RESP>::iterator it = ret.first; it != ret.second; ++it) {
-                    NEWLEAD_RESP am = it->second;
-                    if( am.oper_type != NOTHING){
-                        oper_type = am.oper_type;
-                        req_pid = am.pid;
-                        cout<<"DEBUG: oper type: "<<oper_type<<"\n";
-                        cout<<"DEBUG: Requested process : "<<req_pid<<"\n";
-                    }
+            // Assuming there is consistency in the type of operation among all the processes
+            uint32_t oper_type = NOTHING;
+            uint32_t req_pid = 0;
+            //get the oper type requested
+            pair<multimap<uint32_t, NEWLEAD_RESP>::iterator, multimap<uint32_t, NEWLEAD_RESP>::iterator> ret;
+            ret = newlead_resp_q.equal_range(b->request_id);
+
+            for (multimap<uint32_t, NEWLEAD_RESP>::iterator it = ret.first; it != ret.second; ++it) {
+                NEWLEAD_RESP am = it->second;
+                if( am.oper_type != NOTHING){
+                    oper_type = am.oper_type;
+                    req_pid = am.pid;
+                    cout<<"DEBUG: oper type: "<<oper_type<<"\n";
+                    cout<<"DEBUG: Requested process : "<<req_pid<<"\n";
                 }
+            }
+
+            //check if received NEWLEADRESP from all processes. This is avoid senidng multiple REQUEST to each process.
+            if (check_newlead_resps(b->request_id,oper_type )) {
+                cout<<"entered here\n";
+
                 if(oper_type == ADD){
                     // First this new leader has to make a connection coz to be added peer wouldnt have known about this new leader if the old leader crashed wiothout upadting the view
                     int new_sock = connect_to_new_member_bypid(req_pid, TCP);
