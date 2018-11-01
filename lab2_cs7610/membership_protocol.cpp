@@ -1720,7 +1720,7 @@ int main(int argc, char *argv[])
                                          request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
                                          //if leader failure is being simulated
                                          if(failure_at_process !=0){
-                                             int fail_proc_sock = pid_sock_tcpwrite_map.find(failure_at_process);
+                                             int fail_proc_sock = pid_sock_tcpwrite_map.find(failure_at_process)->second;
 
                                              multicast_mesgs(&m , tcp_writefds, 1, fail_proc_sock);
                                          }
