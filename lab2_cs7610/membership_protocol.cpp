@@ -636,7 +636,7 @@ void initiate_delete(uint32_t remote_pid, uint32_t& request_id ){
             int loss_proc_sock = pid_sock_tcpwrite_map.find(req_loss)->second;
 
             multicast_mesgs(&m , tcp_writefds, 1, loss_proc_sock);
-            return ;
+            exit(0);
         }
         else
         // multicast the REquest message to the tempset
