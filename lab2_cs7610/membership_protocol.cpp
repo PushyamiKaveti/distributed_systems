@@ -72,6 +72,7 @@ bool new_leader_setup = false;
 int new_leader_setup_no_conns = 0;
 
 fd_set tcp_writefds, original, udp_writefds;
+int udp_receive_fd, tcp_receive_fd;
 
 int fdmax;
 vector <string> hostnames;
@@ -686,8 +687,10 @@ void initiate_newleader_protocol( int pid){
     FD_ZERO(&tcp_writefds);
     FD_ZERO(&original);
 
+    FD_SET(tcp_receive_fd , &original);
+    FD_SET(udp_receive_fd , &original);
     //check if the current process is the leader
-    if(pid != LEADER){
+    if(pid == LEADER) {
         //Already listening, and ha sto wait to received connections
         //connect to the new leader
         int lead_sock = connect_to_new_member_bypid(LEADER, TCP);
@@ -1464,7 +1467,8 @@ int main(int argc, char *argv[])
 
    // int fdmax;
     uint32_t pid;
-    int udp_receive_fd, sock_fd, tcp_receive_fd;
+    //int udp_receive_fd, sock_fd, tcp_receive_fd;
+    int sock_fd;
     char s[INET6_ADDRSTRLEN];
     char s_tmp[INET6_ADDRSTRLEN];
     int rv;
