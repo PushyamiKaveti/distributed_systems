@@ -759,7 +759,7 @@ void periodic_timer_thread(bool& s)
 
     while(1) {
         this_thread::sleep_for(chrono::seconds(TIMEOUT));
-        cout<<"here\n";
+        //cout<<"here\n";
         s = true;
     }
 }
@@ -1568,6 +1568,7 @@ int main(int argc, char *argv[])
                                          cout<<"waiting for the failure\n";
                                          //it knows that cuttent process is supposed to be the leader. Just wait for getting info about current LEADER.
                                           while(!new_leader_setup);
+                                         cout<<"waiting for the failure\n";
                                      }
                                      else{
                                          //the connection is not coming from expected leader.
