@@ -897,7 +897,7 @@ bool check_oks( uint32_t request_id, uint32_t oper_type){
 
 }
 bool check_newlead_resps( uint32_t request_id){
-
+    cout<<"checking newleas responses\n";
     int num_acks = newlead_resp_q.count(request_id);
     //cout<<"checking if all acks are received\n";
     //check from all memebers except from the old leader abd itself( the new leader)
@@ -1201,6 +1201,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             newlead_resp_q.insert(pair<uint32_t, NEWLEAD_RESP>(b->request_id, *b));
             //check if received NEWLEADRESP from all processes. This is avoid senidng multiple REQUEST to each process.
             if (check_newlead_resps(b->request_id)) {
+                cout<<"entered here\n";
                 // Assuming there is consistency in the type of operation among all the processes
                 uint32_t oper_type = NOTHING;
                 uint32_t req_pid = 0;
