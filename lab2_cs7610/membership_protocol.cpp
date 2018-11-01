@@ -344,7 +344,7 @@ int connect_to_new_member_bypid(uint32_t new_pid, int proto){
     int rv, sock_fd;
 
     string host = hostnames.at((new_pid-1));
-
+    cout<<"connecting to "<< host<<"\n";
     //for each hostname get addrssinfo
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
