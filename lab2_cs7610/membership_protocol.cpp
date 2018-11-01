@@ -1601,7 +1601,7 @@ int main(int argc, char *argv[])
                                  // if current process is the leader
                                  if(pid == LEADER){
                                      // connect to the new member via tcp and get socket
-                                     new_sock = connect_to_new_member(their_addr, addr_len );
+                                     //new_sock = connect_to_new_member(their_addr, addr_len );
                                      cout<<"Remote host who is trying to connect is : "<<remote_host<<"\n";
                                      // look up the hostnames to get the pid of the peer
                                      int new_pid = get_pidofhost( remote_host);
@@ -1610,6 +1610,7 @@ int main(int argc, char *argv[])
                                          cout<<"Unknown peer trying to connect\n";
                                          continue;
                                      }
+                                     new_sock = connect_to_new_member_bypid(new_pid, TCP);
                                      //usually when the leader starts up the new connection is added only when the view is changed.
                                      //But heree=, since this is new leader and all the peers are already added we add the new socket to
                                      //the socket set so that when we receive a;ll the connections from live peers we can sedn NEWLEADER
