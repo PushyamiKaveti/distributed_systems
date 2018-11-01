@@ -688,7 +688,7 @@ void initiate_newleader_protocol( int pid){
     FD_ZERO(&original);
 
     FD_SET(tcp_receive_fd , &original);
-    FD_SET(udp_receive_fd , &original);
+
     //check if the current process is the leader
     if(pid != LEADER) {
         //Already listening, and ha sto wait to received connections
@@ -1365,6 +1365,7 @@ void heartbeat_thread(int udp_receive_fd , fd_set& udp_writefds, uint32_t pid) {
 
                 if (FD_ISSET(i, &udp_reads)) {
                     if (i == udp_receive_fd) {
+                        /
                         // received message
                         addr_len = sizeof their_addr;
                         if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0, (struct sockaddr *) &their_addr,
@@ -1575,12 +1576,12 @@ int main(int argc, char *argv[])
                                          cout<<"done for the failure\n";
                                      }
                                      else{
-                                         cout<<"This is the reason for heartbeats going to tcp port\n";
+                                         cout<<"THIS IS THE REASON FOR HEARTBEATS GOING TO TCP PORT\n";
                                          //the connection is not coming from expected leader.
                                          //This means the previous leader crashed before updating
                                          FD_ZERO(&original);
                                          FD_SET(tcp_receive_fd, &original);
-                                         FD_SET(udp_receive_fd, &original);
+                                      
                                          //This has extra work of connecting to new leader
                                          FD_ZERO(&tcp_writefds);
                                          FD_ZERO(&udp_writefds);
