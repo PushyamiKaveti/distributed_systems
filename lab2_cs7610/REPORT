@@ -1,0 +1,42 @@
+REPORT FOR LAB2
+------------------
+
+MEMBERSHIP PROTOCOl:
+
+This document explains the implementation details of the project. The software is organized into one single file with all the functions in it. The algorith briefly is as follows
+
+1. All the processes maintain the list of hosts that belong to the membership group.
+2. The leader starts first, sets up the TCP and UDP sockets to listen to new connections on "PORT"
+3. Each of the other peer processes start, setup the ports for listening similar to leader, But also make a connection with the leader.
+4. Once the leader accepts the connections and connects back to send and receive messages.
+5. Once the connection is established the processes start sending HEARTBEATS to every other process in their membership list.
+
+MEMBER ADDING:
+ * on receving connection from the peer process, leader sends REQ message to all the other process
+ * aftyer receiving OKs from all the processes it updates its view and sends the new view to all the processes.
+ * the new vie is received by peers along with the new peer. Then they update their view.
+
+MEMBER DELETING:
+ * Deletion is automatically handled when we crash a process.
+ * Because of the HEART BEAT MESSAGES every process knows if any other proces has crashed.
+ * when the ;leader knows about the crash of a peer, it initiates the deletion protocol.
+ * leader sends a request to all the live members of the group, to delete a particular process. 
+ * upon receiving OKs from all the live processes the leader sends out the NEWVIEW message with new list. The peer update their list accoridngly.
+
+LEADER CRASHING:
+ * Leader crashing can be tested by crashing the leader.
+ * Because of the HEARTBEAT messages every process knows about the crashing of the other processes.
+ * when the leader crashes, the next lowest pid process will become the leader. This is known by every other process.
+ * Once the nee lEADER knows about the crash of the old LEADER, it assumes leader role and waits for connections.
+ * all the other processes also start making connections with the new leader.
+ * after establishing connections the new leader asks other members for pending operations and carrie s them out vis member adding and member deletion phases mentioned above.
+
+
+Design decisions:
+1. The code assumes that the leaader process starts first and only then the peers join.
+2. The network connection is a star topology for TCP connections with LEADER in the center and all the peers connected to the leader. This is to optimize the number of connections involved. As we know that TCP connections are used to send and received membership protocol messages. Thus all peers communicate only with the leader, while the leader communicates with all the peers.
+
+3. The network topology for failure detection is fully connected graph where every node is connected to every other node. This is because the HEARTBEAT messages are multicasted to everyone in the group as maintained in the membership list. HEARTBEATS are sent via UDP connections.
+
+4. Various message types are implemented for the purposes of communication between the processes. They are present in messages.h file.  
+
