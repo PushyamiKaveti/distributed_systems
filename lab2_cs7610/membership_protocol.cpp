@@ -1365,7 +1365,6 @@ void heartbeat_thread(int udp_receive_fd , fd_set& udp_writefds, uint32_t pid) {
 
                 if (FD_ISSET(i, &udp_reads)) {
                     if (i == udp_receive_fd) {
-                        /
                         // received message
                         addr_len = sizeof their_addr;
                         if ((numbytes = recvfrom(i, buf, MAXBUFLEN - 1, 0, (struct sockaddr *) &their_addr,
@@ -1581,7 +1580,7 @@ int main(int argc, char *argv[])
                                          //This means the previous leader crashed before updating
                                          FD_ZERO(&original);
                                          FD_SET(tcp_receive_fd, &original);
-                                      
+
                                          //This has extra work of connecting to new leader
                                          FD_ZERO(&tcp_writefds);
                                          FD_ZERO(&udp_writefds);
