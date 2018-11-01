@@ -1029,10 +1029,6 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 }
                 else if (pending_request.oper_type == DEL){
                     //deletion of the member operations
-                    //delete the req socket from the tcp writes and udp writes and original
-                    FD_CLR(req_sock, &tcp_writefds);
-                    FD_CLR(req_sock_read, &original);
-                    FD_CLR(req_sock_udp, &udp_writefds);
 
                     //remove the pid from the membership list
                     for (int i = 0; i < membership_list.size(); ++i) {
@@ -1042,9 +1038,19 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                         }
                     }
 
-                    //leader deleted the socks from the sock id maps
-                    pid_sock_tcpread_map.erase(pid_sock_tcpread_map.find(req_pid));
-                    pid_sock_tcpwrite_map.erase(pid_sock_tcpwrite_map.find(req_pid));
+                    // This means it is a delete request after leader failing
+                    if(req_sock >= 0 &&req_sock_read >= 0 ){
+                        //delete the req socket from the tcp writes and udp writes and original
+                        FD_CLR(req_sock, &tcp_writefds);
+                        FD_CLR(req_sock_read, &original);
+
+                        //leader deleted the socks from the sock id maps
+                        pid_sock_tcpread_map.erase(pid_sock_tcpread_map.find(req_pid));
+                        pid_sock_tcpwrite_map.erase(pid_sock_tcpwrite_map.find(req_pid));
+                    }
+
+                    FD_CLR(req_sock_udp, &udp_writefds);
+
                     pid_sock_udp_map.erase(pid_sock_udp_map.find(req_pid));
 
                     cout<<"Removing peer "<<req_pid<<" from live peers\n";
@@ -1281,8 +1287,6 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 }
                 else if(oper_type == DEL){
 
-                    int tcp_sock = pid_sock_tcpwrite_map.find(req_pid)->second;
-                    int tcp_sock_read = pid_sock_tcpread_map.find(req_pid)->second;
                     int udp_sock = pid_sock_udp_map.find(req_pid)->second;
                     //create a new REquest message
                     REQ_MESG m {1, (uint32_t)request_id, view_id, DEL, req_pid};
@@ -1291,25 +1295,17 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     is_pending = true;
 
                     //insert the request -> (pid, socket) mapping inside leader map.
-                    pair<uint32_t, int> req_pair(req_pid, tcp_sock);
+                    pair<uint32_t, int> req_pair(req_pid, -1);
                     request_map_tcpwrite.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair));
 
-                    pair<uint32_t, int> req_pair_read(req_pid, tcp_sock_read);
+                    pair<uint32_t, int> req_pair_read(req_pid, -1);
                     request_map_tcpread.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_read));
 
                     pair<uint32_t, int> req_pair_udp(req_pid, udp_sock);
                     request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
 
-                    //copy all the fds excpet for the one to be removed to a temp set
-                    fd_set writefds;
-                    FD_ZERO(&writefds);
-                    //remove the tcp socket from
-                    for(int i =0; i<=fdmax; i++){
-                        if(FD_ISSET(i, &tcp_writefds) && i!=tcp_sock)
-                            FD_SET(i, &writefds);
-                    }
                     // multicast the REquest message to the tempset
-                    multicast_mesgs(&m , writefds, 1);
+                    multicast_mesgs(&m , tcp_writefds, 1);
                     //increment the request id
                     request_id ++;
                 }
