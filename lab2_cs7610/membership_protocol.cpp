@@ -677,13 +677,16 @@ void initiate_newleader_protocol( int pid){
     //TODO: On the other hand 1. the peers can start by connecting to the new leader in th similar way at the start, update the sockets with new leader
     //TODO: on the leader side, it gets new connections, accepts them and connects back to them, updates its tcwrites and reads. instead of sending REQ, it sends NEW LEADER
     //to remember the new leader setup is hapenning
-
+    int old_lead = LEADER;
+    int old_lead_ind = 0;
     //make the next available lowest PID process as LEADER
     int next_lead = MAX_PROCESSES+1;
     for(int i =0 ; i< membership_list.size(); i++){
         uint32_t cur = membership_list.at(i);
         if(cur < next_lead && cur != LEADER)
             next_lead = membership_list.at(i);
+        if(cur == LEADER)
+            old_lead_ind = i;
     }
     cout<<"NEXT LEADER  IS PROCESS : "<<next_lead<<"\n";
     //update the leader variable
@@ -694,6 +697,9 @@ void initiate_newleader_protocol( int pid){
 
     FD_SET(tcp_receive_fd , &original);
 
+    pid_sock_udp_map.erase(pid_sock_udp_map.find(old_lead));
+    membership_list.erase(membership_list.begin()+old_lead_ind);
+    live_peer_map.erase(live_peer_map.find(old_lead));
     //check if the current process is the leader
     if(pid != LEADER) {
         //Already listening, and ha sto wait to received connections
@@ -1266,7 +1272,15 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                     request_id ++;
                 }
                 else if (oper_type == NOTHING){
+
                     cout<<"NO PENDING TASKS\n";
+                    //requires membership update
+                    cout<<"LEADER : "<<LEADER<<"\n";
+                    for(int i = 0; i< membership_list.size(); i++){
+                        cout<<membership_list.at(i)<<",";
+                    }
+                    cout<<"\n";
+
                 }
                 else{
                     cout<<"ERROR: invalid OPeration type\n";
