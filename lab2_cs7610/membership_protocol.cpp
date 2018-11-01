@@ -476,7 +476,8 @@ int connect_to_new_member(struct sockaddr_storage their_addr, socklen_t addr_len
     struct addrinfo hints, *servinfo, *p;
 
     getnameinfo( (struct sockaddr *) &their_addr, addr_len, remote_host, sizeof (remote_host), NULL, 0, NI_NUMERICHOST);
-    //puts(remote_host);
+    cout<<"connecting to : ";
+    puts(remote_host);
 
     //*****************************************************************//
     // CONNECT TO THE REMOTE HOST THAT CONTACTED LEADER VIA TCP
