@@ -1154,7 +1154,7 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
             //  else print unexpected behavior already time dout but received heart beat
             HEARTBEAT* b = (HEARTBEAT *) buf;
             map<uint32_t , pair<bool, bool>> ::iterator it = live_peer_map.find(b->pid);
-            cout<<"Got HEARTBEAT FROM PEER "<<b->pid<<"\n";
+           // cout<<"Got HEARTBEAT FROM PEER "<<b->pid<<"\n"; //TEMP
             // if the pid of heartbeat message is present in live peer map
             if(it != live_peer_map.end())
             {
