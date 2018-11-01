@@ -722,6 +722,7 @@ void timeout_thread(uint32_t remote_pid, bool& reset, int pid, uint32_t& request
                         cout<<"Initiating NEW LEADER PROTOCOL\n";
                         //to remember the new leader setup is hapenning
                         new_leader_setup = true;
+                        initiate_newleader_protocol(pid);
                         //Initiate the new leader protocol inside the main loop to keep everything
                         // synchronous in a single thread. Otherwise the main lopp there keeps hapenning
                     }
@@ -1523,9 +1524,9 @@ int main(int argc, char *argv[])
     {
 
         //LEADER CRASHED AND NEW LEADER PROTOCOL NEEDS T BE INITIATED
-        if(new_leader_setup){
-            initiate_newleader_protocol(pid);
-        }
+        //if(new_leader_setup){
+       //     initiate_newleader_protocol(pid);
+       // }
 
         tcp_readfds = original;
         rv = select(fdmax+1, &tcp_readfds, NULL, NULL, &tv);
