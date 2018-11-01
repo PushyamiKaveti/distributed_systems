@@ -527,13 +527,12 @@ int connect_to_new_member(struct sockaddr_storage their_addr, socklen_t addr_len
 
 
 
-void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty){
+void multicast_mesgs(void* m, fd_set writefds, uint32_t  ty, int f=-1){
     int s = 0;
     for (int i=0 ; i <=fdmax ;i++)
     {
-        if (FD_ISSET(i, &writefds))
+        if (FD_ISSET(i, &writefds) && i != f )
         {
-
             switch (ty){
                 case 1 :
                 {
@@ -1416,6 +1415,7 @@ int main(int argc, char *argv[])
     char* hostfile;
     bool simulate_loss=false;
     char* lossfile;
+    uint32_t failure_at_process = 0;
 
 
     bool args_provided = false;
@@ -1436,7 +1436,11 @@ int main(int argc, char *argv[])
                 hostfile = optarg;
                 break;
             }
-
+            case 'f':
+            {
+                failure_at_process = (uinte32_t)atoi(optarg);
+                break;
+            }
             case '?':
                 if (optopt == 'c' || optopt == 'p'||optopt == 'h')
                     fprintf (stderr, "Option -%c requires an argument.\n", optopt);
@@ -1714,8 +1718,14 @@ int main(int argc, char *argv[])
 
                                          pair<uint32_t, int> req_pair_udp(new_pid, new_sock_udp);
                                          request_map_udp.insert(pair< uint32_t , pair<uint32_t, int>> (request_id, req_pair_udp));
+                                         //if leader failure is being simulated
+                                         if(failure_at_process !=0){
+                                             int fail_proc_sock = pid_sock_tcpwrite_map.find(failure_at_process);
 
-                                         multicast_mesgs(&m , tcp_writefds, 1);
+                                             multicast_mesgs(&m , tcp_writefds, 1, fail_proc_sock);
+                                         }
+                                         else
+                                             multicast_mesgs(&m , tcp_writefds, 1);
                                          request_id ++;
                                      }
                                      else{
