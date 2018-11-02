@@ -931,11 +931,7 @@ bool check_newlead_resps( uint32_t request_id, uint32_t oper_type){
         if (num_acks == (membership_list.size() - 2))
             return true;
     }
-    else{
-        cout<<"INVALID OPERTAION\n";
-        return false;
-    }
-
+   
     return false;
 
 }
