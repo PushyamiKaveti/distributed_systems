@@ -931,7 +931,7 @@ bool check_newlead_resps( uint32_t request_id, uint32_t oper_type){
         if (num_acks == (membership_list.size() - 2))
             return true;
     }
-   
+
     return false;
 
 }
@@ -1098,16 +1098,16 @@ void handle_messages(char* buf, uint32_t ty , uint32_t pid, uint32_t& request_id
                 bool found = false;
                 uint32_t req_pid = pending_request.pid;
                 cout<<"oper : "<<pending_request.oper_type<<" , process id :"<<pending_request.pid<<"\n";
-                int num_elem = membership_list.size();
-                for (int i = 0; i < num_elem ; i++){
+                int del_id = 0;
+                for (int i = 0; i < membership_list.size() ; i++){
                     if(membership_list.at(i) == req_pid){
-                        membership_list.erase(membership_list.begin()+i);
+                        del_id = i;
                     }
                     else
                         cout<<membership_list.at(i)<<",";
                 }
                 cout<<"\n";
-
+                membership_list.erase(membership_list.begin()+del_id);
                 //delete this memeber from all the datastructures
                 map<uint32_t, int>::iterator it = pid_sock_udp_map.find(req_pid);
                 if(it != pid_sock_udp_map.end())
