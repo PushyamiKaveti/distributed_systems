@@ -40,3 +40,6 @@ Design decisions:
 
 4. Various message types are implemented for the purposes of communication between the processes. They are present in messages.h file.  
 
+5. The HEART BEAT messages are being sent currently at 10 hz. It is held is #define TIMEOUT in membership_protocol.cpp file.
+
+
